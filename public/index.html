@@ -17,7 +17,34 @@
 
   <div id="status" class="text-center mt-4 text-gray-700"></div>
 
+  <button id="testOcrBtn" class="mb-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition">
+  Test OCR
+</button>
+<div id="ocrResult" class="mt-2 text-gray-700"></div>
+
+
   <script>
+
+    document.getElementById("testOcrBtn").addEventListener("click", async () => {
+  const fileInput = document.getElementById("fileInput");
+  if (!fileInput.files.length) return alert("Select an image first!");
+
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const status = document.getElementById("ocrResult");
+  status.innerText = "Sending to OCR...";
+
+  try {
+    const res = await fetch("/functions/ocr", { method: "POST", body: formData });
+    const text = await res.text();
+    status.innerText = "OCR Result:\n" + text;
+  } catch (err) {
+    status.innerText = "Error: " + err.message;
+  }
+});
+
     async function compressImage(file, maxWidth = 1000, quality = 0.7) {
       const img = await createImageBitmap(file);
       const canvas = document.createElement("canvas");
@@ -91,6 +118,10 @@
     }
 
     document.getElementById("uploadBtn").addEventListener("click", uploadFiles);
+
+    
   </script>
+
+  
 </body>
 </html>
