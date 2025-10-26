@@ -12,6 +12,5 @@ export async function onRequestPost({ request, env }) {
   });
 
   const data = await res.json();
-  const text = data.ParsedResults?.[0]?.ParsedText || "";
-  return new Response(text, { headers: { "Content-Type": "text/plain" } });
+  return new Response(JSON.stringify(data, null, 2), { headers: { "Content-Type": "application/json" } });
 }
