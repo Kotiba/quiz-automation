@@ -1,12 +1,96 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Hello, World!</title>
-	</head>
-	<body>
-		<h1 id="heading">Hello, World!</h1>
-		<p>This page comes from a static asset stored at `public/index.html` as configured in `wrangler.jsonc`.</p>
-	</body>
+<head>
+  <meta charset="UTF-8" />
+  <title>Quiz Automation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center p-6">
+  <h2 class="text-3xl font-bold mb-6 text-center">📚 Quiz Automation</h2>
+
+  <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" multiple
+         class="mb-4 p-2 border border-gray-300 rounded" />
+
+  <button id="uploadBtn" class="mb-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
+    Upload & Generate
+  </button>
+
+  <div id="status" class="text-center mt-4 text-gray-700"></div>
+
+  <script>
+    async function compressImage(file, maxWidth = 1000, quality = 0.7) {
+      const img = await createImageBitmap(file);
+      const canvas = document.createElement("canvas");
+      const scale = Math.min(1, maxWidth / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", quality));
+      return new File([blob], file.name, { type: "image/jpeg" });
+    }
+
+    async function uploadFiles() {
+      const files = document.getElementById("fileInput").files;
+      if (!files.length) return alert("Select images or PDFs first!");
+      const status = document.getElementById("status");
+      status.innerText = "Processing...";
+
+      let fullText = "";
+      for (const [i, f] of Array.from(files).entries()) {
+        status.innerText = `Processing file ${i+1} of ${files.length}...`;
+
+        let smallFile;
+        if (f.type.startsWith("image/")) {
+          smallFile = await compressImage(f);
+        } else {
+          alert("PDF support coming soon — upload images for now.");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", smallFile);
+        const ocrRes = await fetch("/functions/ocr", { method: "POST", body: formData });
+        const text = await ocrRes.text();
+        fullText += text + "\n";
+      }
+
+      status.innerText = "Generating quiz...";
+      const quizRes = await fetch("/functions/quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: fullText })
+      });
+      const quiz = await quizRes.json();
+
+      status.innerText = "Creating Google Form...";
+      const formRes = await fetch("/functions/form", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(quiz)
+      });
+      const { formUrl } = await formRes.json();
+
+      status.innerHTML = `
+        ✅ Quiz generated! <br>
+        <a href="${formUrl}" target="_blank" class="text-blue-600 hover:underline">Open Google Form</a><br><br>
+        <button id="downloadBtn" class="mt-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+          Download JSON
+        </button>
+      `;
+
+      document.getElementById("downloadBtn").onclick = () => {
+        const blob = new Blob([JSON.stringify(quiz, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "quiz.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+    }
+
+    document.getElementById("uploadBtn").addEventListener("click", uploadFiles);
+  </script>
+</body>
 </html>
