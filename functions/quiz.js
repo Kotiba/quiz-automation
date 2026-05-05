@@ -1,9 +1,10 @@
 export async function onRequest({ request, env }) {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
-  const GEMINI_API_KEY = request.headers.get("X-Gemini-Key") || env.GEMINI_API_KEY;
 
-  if (!GEMINI_API_KEY) {
-    return new Response(JSON.stringify({ error: "GEMINI_API_KEY not configured" }), { status: 500, headers: { "Content-Type": "application/json" } });
+  const GROQ_API_KEY = request.headers.get("X-Gemini-Key") || env.GROQ_API_KEY;
+
+  if (!GROQ_API_KEY) {
+    return new Response(JSON.stringify({ error: "GROQ_API_KEY not configured" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
   const { text, questionCount = 30, mode } = await request.json();
@@ -11,8 +12,6 @@ export async function onRequest({ request, env }) {
   if (!text || !text.trim()) {
     return new Response(JSON.stringify({ error: "No text provided" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
-
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
   const easyCount = Math.round(questionCount * 0.7);
   const hardCount = questionCount - easyCount;
@@ -42,41 +41,42 @@ Rules:
 Study material:
 ${text}`;
 
-  const res = await fetch(GEMINI_URL, {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Authorization": `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7
-      }
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      response_format: { type: "json_object" }
     })
   });
 
   if (!res.ok) {
     const err = await res.text();
-    return new Response(JSON.stringify({ error: `Gemini API error: ${err}` }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: `Groq API error: ${err}` }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
   const data = await res.json();
-  const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const responseText = data.choices?.[0]?.message?.content;
 
   if (!responseText) {
-    return new Response(JSON.stringify({ error: "No response from Gemini" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "No response from Groq" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
   try {
     const quiz = JSON.parse(responseText);
     return new Response(JSON.stringify(quiz), { headers: { "Content-Type": "application/json" } });
   } catch (e) {
-    // Try to extract JSON block if extra text is present
     const match = responseText.match(/\{[\s\S]*\}/);
     if (match) {
       try {
-        const quiz = JSON.parse(match[0]);
-        return new Response(JSON.stringify(quiz), { headers: { "Content-Type": "application/json" } });
+        return new Response(match[0], { headers: { "Content-Type": "application/json" } });
       } catch (e2) {}
     }
-    return new Response(JSON.stringify({ error: `Failed to parse Gemini response: ${responseText.substring(0, 300)}` }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: `Failed to parse response: ${responseText.substring(0, 300)}` }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }

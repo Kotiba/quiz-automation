@@ -9,10 +9,11 @@ function arrayBufferToBase64(buffer) {
 
 export async function onRequest({ request, env }) {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
-  const GEMINI_API_KEY = request.headers.get("X-Gemini-Key") || env.GEMINI_API_KEY;
 
-  if (!GEMINI_API_KEY) {
-    return new Response(JSON.stringify({ error: "GEMINI_API_KEY not configured" }), { status: 500, headers: { "Content-Type": "application/json" } });
+  const GROQ_API_KEY = request.headers.get("X-Gemini-Key") || env.GROQ_API_KEY;
+
+  if (!GROQ_API_KEY) {
+    return new Response(JSON.stringify({ error: "GROQ_API_KEY not configured" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
   const form = await request.formData();
@@ -26,28 +27,38 @@ export async function onRequest({ request, env }) {
   const base64Data = arrayBufferToBase64(arrayBuffer);
   const mimeType = file.type || "image/jpeg";
 
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-  const res = await fetch(GEMINI_URL, {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Authorization": `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({
-      contents: [{
-        parts: [
-          { inlineData: { mimeType, data: base64Data } },
-          { text: "Extract and return ALL text visible in this image exactly as written. Include all questions, options, answers, and any other text. Return only the raw extracted text with no commentary." }
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      messages: [{
+        role: "user",
+        content: [
+          {
+            type: "image_url",
+            image_url: { url: `data:${mimeType};base64,${base64Data}` }
+          },
+          {
+            type: "text",
+            text: "Extract and return ALL text visible in this image exactly as written. Include all questions, options, answers, and any other text. Return only the raw extracted text with no commentary."
+          }
         ]
-      }]
+      }],
+      temperature: 0.1
     })
   });
 
   if (!res.ok) {
     const err = await res.text();
-    return new Response(JSON.stringify({ error: `Gemini OCR error: ${err}` }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: `Groq OCR error: ${err}` }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
   const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const text = data.choices?.[0]?.message?.content || "";
 
   return new Response(JSON.stringify({ text }), { headers: { "Content-Type": "application/json" } });
 }
