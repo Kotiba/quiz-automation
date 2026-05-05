@@ -9,8 +9,7 @@
     "entry-point": "functions"  // your Worker functions folder
   },
   "vars": {
-    "OCR_API_KEY": "K86505009988957",
-    "DEEPSEEK_API_KEY": "sk-a20581681d33430ab9e8428a90117e0f",
+    "GEMINI_API_KEY": "YOUR_GEMINI_API_KEY_HERE",
     "FORM_SCRIPT_URL": "https://script.google.com/macros/s/AKfycbxq5adeWwp2qqM2mkkntqy7OssX7JCsVNsJcIzZb9iud4MPuvTyxr8ii__As1F2B9zz/exec"
   }
 }

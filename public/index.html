@@ -177,6 +177,11 @@
       </div>
       
       <div class="mb-4">
+        <label class="block text-sm font-medium text-slate-900 mb-2">Gemini API Key</label>
+        <input type="password" id="geminiApiKey" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm font-mono" placeholder="AIza...">
+        <p class="text-xs text-slate-500 mt-2">💡 Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" class="underline">aistudio.google.com/apikey</a> — saved locally in your browser</p>
+      </div>
+      <div class="mb-4">
         <label class="block text-sm font-medium text-slate-900 mb-2">Google Apps Script URL</label>
         <input type="text" id="scriptUrl" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm font-mono" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec">
         <p class="text-xs text-slate-500 mt-2">💡 This is the deployment URL from your Google Apps Script</p>
@@ -208,10 +213,6 @@
           </div>
         </div>
         <div id="filePreview" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
-        <div class="mb-4 mt-6">
-          <label class="block text-sm font-medium text-slate-900 mb-2">Number of Questions</label>
-          <input type="number" id="questionCount" value="30" min="5" max="50" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm">
-        </div>
       </div>
 
       <!-- Text Mode -->
@@ -221,6 +222,12 @@
           <textarea id="questionsInput" class="w-full h-64 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm resize-none" placeholder="Paste your questions in any format..."></textarea>
           <p id="textPreview" class="text-xs text-slate-500 mt-2">0 characters, 0 lines</p>
         </div>
+      </div>
+
+      <!-- Number of Questions (shared) -->
+      <div class="mt-4">
+        <label class="block text-sm font-medium text-slate-900 mb-2">Number of Questions</label>
+        <input type="number" id="questionCount" value="30" min="5" max="50" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm">
       </div>
     </div>
 
@@ -269,7 +276,24 @@
     const textMode = document.getElementById("textMode");
     const questionsInput = document.getElementById("questionsInput");
     const textPreview = document.getElementById("textPreview");
+    const geminiApiKeyInput = document.getElementById("geminiApiKey");
     let currentMode = "upload";
+
+    // Load saved settings from localStorage
+    geminiApiKeyInput.value = localStorage.getItem("geminiApiKey") || "";
+    document.getElementById("scriptUrl").value = localStorage.getItem("scriptUrl") || "";
+    geminiApiKeyInput.addEventListener("input", () => localStorage.setItem("geminiApiKey", geminiApiKeyInput.value.trim()));
+    document.getElementById("scriptUrl").addEventListener("input", (e) => localStorage.setItem("scriptUrl", e.target.value.trim()));
+
+    function getApiHeaders(extra = {}) {
+      const key = geminiApiKeyInput.value.trim();
+      return { "Content-Type": "application/json", ...(key ? { "X-Gemini-Key": key } : {}), ...extra };
+    }
+
+    function getFormHeaders() {
+      const key = geminiApiKeyInput.value.trim();
+      return key ? { "X-Gemini-Key": key } : {};
+    }
 
     function log(message, type = "info") {
       const timestamp = new Date().toLocaleTimeString();
@@ -332,55 +356,68 @@
 
     document.getElementById("uploadBtn").addEventListener("click", async () => {
       const status = document.getElementById("status");
+      const questionCount = document.getElementById("questionCount").value || 30;
+
+      if (!geminiApiKeyInput.value.trim() && !"env") {
+        status.innerHTML = `<div class="status-error p-4 rounded-lg text-sm">⚠️ Please enter your Gemini API Key in Settings first.</div>`;
+        return;
+      }
+
       try {
         log("=== QUIZ GENERATION STARTED ===");
         let fullText = "";
+
         if (currentMode === "upload") {
           const files = document.getElementById("fileInput").files;
-          if (!files.length) return alert("Select images!");
+          if (!files.length) return alert("Select images first!");
           for (const f of Array.from(files)) {
-            status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">🔄 Processing ${f.name}...</div>`;
+            status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">🔍 Extracting text from ${f.name}...</div>`;
+            log(`Processing image: ${f.name}`);
             const smallFile = await compressImage(f);
-            const formData = new FormData(); formData.append("file", smallFile);
-            const ocrRes = await fetch("/functions/ocr", { method: "POST", body: formData });
+            const formData = new FormData();
+            formData.append("file", smallFile);
+            const ocrRes = await fetch("/functions/ocr", { method: "POST", headers: getFormHeaders(), body: formData });
+            if (!ocrRes.ok) throw new Error(`OCR failed: ${await ocrRes.text()}`);
             const ocrData = await ocrRes.json();
+            if (ocrData.error) throw new Error(ocrData.error);
             fullText += (ocrData.text || "") + "\n\n";
+            log(`Extracted ${ocrData.text?.length || 0} characters from ${f.name}`, "success");
           }
         } else {
           fullText = questionsInput.value.trim();
-          if (!fullText) return alert("Paste questions!");
-          log(`Using pasted text: ${fullText.length} characters`);
+          if (!fullText) return alert("Paste some questions or study material first!");
+          log(`Text mode: ${fullText.length} characters`);
         }
 
-        log("Sending text to AI for quiz generation...");
-        status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">🤖 Generating quiz...</div>`;
+        log("Sending to Gemini for quiz generation...");
+        status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">🤖 Generating quiz with Gemini...</div>`;
+
         const quizRes = await fetch("/functions/quiz", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: fullText, questionCount: document.getElementById("questionCount")?.value || 30, mode: currentMode })
+          headers: getApiHeaders(),
+          body: JSON.stringify({ text: fullText, questionCount, mode: currentMode })
         });
+
         const quizResText = await quizRes.text();
         log(`Quiz API response: status ${quizRes.status}`);
         log(`Quiz response: ${quizResText.substring(0, 200)}...`);
+
+        if (!quizRes.ok) throw new Error(`Quiz generation failed: ${quizResText}`);
         const quiz = JSON.parse(quizResText);
-        log(`Quiz generated with ${quiz.questions?.length || 0} questions`);
+        if (quiz.error) throw new Error(quiz.error);
+        log(`Quiz generated with ${quiz.questions?.length || 0} questions`, "success");
 
         log("Creating Google Form...");
         status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">📝 Creating Google Form...</div>`;
 
-        // Use custom script URL if provided, otherwise use default
-        const customScriptUrl = document.getElementById("scriptUrl").value.trim();
-        const formPayload = customScriptUrl
-          ? { ...quiz, scriptUrl: customScriptUrl }
-          : quiz;
-
         const formRes = await fetch("/functions/form", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formPayload)
+          headers: getApiHeaders(),
+          body: JSON.stringify(quiz)
         });
         const formData = await formRes.json();
-        log(`Form created: ${formData.formUrl}`);
+        if (formData.error) throw new Error(formData.error);
+        log(`Form created: ${formData.formUrl}`, "success");
 
         status.innerHTML = `
           <div class="space-y-4">
