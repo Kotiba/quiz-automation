@@ -1,127 +1,407 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quiz Automation</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    * {
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #fafbfc 0%, #f3f4f6 100%);
+      min-height: 100vh;
+    }
+
+    button, input, a {
+      transition: all 0.2s ease-out;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-in {
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    input[type="file"]::file-selector-button {
+      background: #0f172a;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    input[type="file"]::file-selector-button:hover {
+      background: #1e293b;
+    }
+
+    input[type="checkbox"] {
+      accent-color: #0f172a;
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+    }
+
+    .status-success {
+      background: #f0fdf4;
+      border: 1px solid #dcfce7;
+      color: #166534;
+    }
+
+    .status-error {
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      color: #991b1b;
+    }
+
+    .status-info {
+      background: #f0f9ff;
+      border: 1px solid #e0f2fe;
+      color: #0c2d6b;
+    }
+
+    #debugLog {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    .debug-entry {
+      color: #64748b;
+      padding: 4px 0;
+      font-size: 12px;
+    }
+
+    .debug-entry.info {
+      color: #0c4a6e;
+    }
+
+    .debug-entry.success {
+      color: #166534;
+    }
+
+    .debug-entry.error {
+      color: #991b1b;
+    }
+
+    .debug-entry.warning {
+      color: #92400e;
+    }
+
+    .file-card {
+      transition: all 0.2s ease-out;
+    }
+
+    .file-card:hover {
+      transform: translateY(-2px);
+      border-color: #cbd5e1;
+    }
+
+    .upload-area {
+      border: 2px dashed #cbd5e1;
+      background: #f8fafc;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .upload-area:hover {
+      border-color: #0f172a;
+      background: #f1f5f9;
+    }
+
+    .upload-area.drag-over {
+      border-color: #0f172a;
+      background: #f1f5f9;
+    }
+
+    .upload-area input[type="file"] {
+      width: auto;
+    }
+  </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center p-6">
-  <h2 class="text-3xl font-bold mb-6 text-center">📚 Quiz Automation</h2>
+<body class="p-4 md:p-8">
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-12 animate-in">
+      <div class="flex items-start gap-4 mb-2">
+        <div class="text-4xl">📚</div>
+        <div>
+          <h1 class="text-4xl font-bold text-slate-900 mb-1">Quiz Automation</h1>
+          <p class="text-slate-600 text-sm">Convert book pages to interactive quizzes with AI</p>
+        </div>
+      </div>
+    </div>
 
-  <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" multiple
-         class="mb-4 p-2 border border-gray-300 rounded" />
+    <!-- Settings Section -->
+    <div class="bg-white border border-slate-200 rounded-lg p-8 mb-6 animate-in">
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold text-slate-900 mb-1">⚙️ Settings</h2>
+        <p class="text-sm text-slate-600">Configure your Google Form Script URL</p>
+      </div>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-slate-900 mb-2">Google Apps Script URL</label>
+        <input type="text" id="scriptUrl" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm font-mono" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec">
+        <p class="text-xs text-slate-500 mt-2">💡 This is the deployment URL from your Google Apps Script</p>
+      </div>
+    </div>
 
-  <button id="uploadBtn" class="mb-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
-    Upload & Generate
-  </button>
+    <!-- Input Method Selection -->
+    <div class="bg-white border border-slate-200 rounded-lg p-8 mb-6 animate-in">
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold text-slate-900 mb-1">Step 1: Choose Input Method</h2>
+        <p class="text-sm text-slate-600">Select how you want to provide quiz content</p>
+      </div>
+      
+      <div class="flex gap-4 mb-6">
+        <button id="uploadModeBtn" class="flex-1 bg-slate-900 text-white px-4 py-3 rounded-lg font-medium text-sm transition-colors">
+          📷 Upload Images
+        </button>
+        <button id="textModeBtn" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-900 px-4 py-3 rounded-lg font-medium text-sm transition-colors">
+          📝 Paste Questions
+        </button>
+      </div>
 
-  <div id="status" class="text-center mt-4 text-gray-700"></div>
+      <!-- Upload Mode -->
+      <div id="uploadMode">
+        <div class="mb-6">
+          <div class="upload-area rounded-lg p-8">
+            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" multiple>
+            <p class="text-slate-500 text-xs">JPG, PNG, PDF • Max 1MB per file</p>
+          </div>
+        </div>
+        <div id="filePreview" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+        <div class="mb-4 mt-6">
+          <label class="block text-sm font-medium text-slate-900 mb-2">Number of Questions</label>
+          <input type="number" id="questionCount" value="30" min="5" max="50" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm">
+        </div>
+      </div>
 
-  <button id="testOcrBtn" class="mb-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition">
-  Test OCR
-</button>
-<div id="ocrResult" class="mt-2 text-gray-700"></div>
+      <!-- Text Mode -->
+      <div id="textMode" style="display: none;">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-slate-900 mb-2">Paste your questions here</label>
+          <textarea id="questionsInput" class="w-full h-64 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm resize-none" placeholder="Paste your questions in any format..."></textarea>
+          <p id="textPreview" class="text-xs text-slate-500 mt-2">0 characters, 0 lines</p>
+        </div>
+      </div>
+    </div>
 
+    <!-- Actions Section -->
+    <div class="bg-white border border-slate-200 rounded-lg p-8 mb-6 animate-in">
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold text-slate-900 mb-1">Step 2: Generate Quiz</h2>
+        <p class="text-sm text-slate-600">Choose an action to process your images</p>
+      </div>
+      <button id="uploadBtn" class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-lg font-medium text-sm transition-colors">
+        Generate Quiz
+      </button>
+    </div>
+
+    <!-- Status Section -->
+    <div class="bg-white border border-slate-200 rounded-lg p-8 mb-6 animate-in">
+      <h2 class="text-xl font-semibold text-slate-900 mb-4">Status</h2>
+      <div id="status" class="text-slate-700 min-h-12 text-sm"></div>
+    </div>
+
+    <!-- Debug Toggle -->
+    <div class="bg-white border border-slate-200 rounded-lg p-6 mb-6 animate-in">
+      <label class="flex items-center gap-3 cursor-pointer">
+        <input type="checkbox" id="debugMode">
+        <span class="text-slate-900 font-medium text-sm">🐛 Debug Mode</span>
+      </label>
+    </div>
+    
+    <!-- Debug Console -->
+    <div id="debugContainer" class="bg-white border border-slate-200 rounded-lg p-8 animate-in" style="display: none;">
+      <h2 class="text-xl font-semibold text-slate-900 mb-4">Debug Console</h2>
+      <div id="debugLog" class="rounded-lg p-4 h-80 overflow-y-auto font-mono text-xs border border-slate-200 mb-4"></div>
+      <button id="clearLog" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
+        Clear Log
+      </button>
+    </div>
+  </div>
 
   <script>
+    const debugLog = document.getElementById("debugLog");
+    const debugMode = document.getElementById("debugMode");
+    const debugContainer = document.getElementById("debugContainer");
+    const uploadModeBtn = document.getElementById("uploadModeBtn");
+    const textModeBtn = document.getElementById("textModeBtn");
+    const uploadMode = document.getElementById("uploadMode");
+    const textMode = document.getElementById("textMode");
+    const questionsInput = document.getElementById("questionsInput");
+    const textPreview = document.getElementById("textPreview");
+    let currentMode = "upload";
 
-    document.getElementById("testOcrBtn").addEventListener("click", async () => {
-  const fileInput = document.getElementById("fileInput");
-  if (!fileInput.files.length) return alert("Select an image first!");
+    function log(message, type = "info") {
+      const timestamp = new Date().toLocaleTimeString();
+      const colors = { info: "debug-entry info", success: "debug-entry success", error: "debug-entry error", warning: "debug-entry warning" };
+      const logEntry = document.createElement("div");
+      logEntry.className = colors[type];
+      logEntry.textContent = `[${timestamp}] ${message}`;
+      debugLog.appendChild(logEntry);
+      debugLog.scrollTop = debugLog.scrollHeight;
+    }
 
-  const file = fileInput.files[0];
-  const formData = new FormData();
-  formData.append("file", file);
+    uploadModeBtn.addEventListener("click", () => {
+      currentMode = "upload";
+      uploadModeBtn.className = "flex-1 bg-slate-900 text-white px-4 py-3 rounded-lg font-medium text-sm transition-colors";
+      textModeBtn.className = "flex-1 bg-slate-200 hover:bg-slate-300 text-slate-900 px-4 py-3 rounded-lg font-medium text-sm transition-colors";
+      uploadMode.style.display = "block"; textMode.style.display = "none";
+      log("Switched to upload mode");
+    });
 
-  const status = document.getElementById("ocrResult");
-  status.innerText = "Sending to OCR...";
+    textModeBtn.addEventListener("click", () => {
+      currentMode = "text";
+      textModeBtn.className = "flex-1 bg-slate-900 text-white px-4 py-3 rounded-lg font-medium text-sm transition-colors";
+      uploadModeBtn.className = "flex-1 bg-slate-200 hover:bg-slate-300 text-slate-900 px-4 py-3 rounded-lg font-medium text-sm transition-colors";
+      uploadMode.style.display = "none"; textMode.style.display = "block";
+      log("Switched to text mode");
+    });
 
-  try {
-    const res = await fetch("/functions/ocr", { method: "POST", body: formData });
-    const text = await res.text();
-    status.innerText = "OCR Result:\n" + text;
-  } catch (err) {
-    status.innerText = "Error: " + err.message;
-  }
-});
+    questionsInput.addEventListener("input", (e) => {
+      const text = e.target.value;
+      textPreview.textContent = `${text.length} characters, ${text.split("\n").length} lines`;
+    });
 
-    async function compressImage(file, maxWidth = 1000, quality = 0.7) {
+    debugMode.addEventListener("change", (e) => { debugContainer.style.display = e.target.checked ? "block" : "none"; });
+    document.getElementById("clearLog").addEventListener("click", () => { debugLog.innerHTML = ""; });
+
+    document.getElementById("fileInput").addEventListener("change", (e) => {
+      const files = e.target.files;
+      const preview = document.getElementById("filePreview");
+      preview.innerHTML = "";
+      log(`${files.length} file(s) selected`);
+      Array.from(files).forEach((file) => {
+        const div = document.createElement("div");
+        div.className = "file-card bg-slate-50 border border-slate-200 rounded-lg p-4 animate-in";
+        div.innerHTML = `<p class="font-medium text-slate-900 text-sm truncate">${file.name}</p><p class="text-xs text-slate-500 mt-1">${(file.size / 1024).toFixed(1)} KB</p>`;
+        preview.appendChild(div);
+      });
+    });
+
+    async function compressImage(file) {
+      log(`Compressing ${file.name}...`);
       const img = await createImageBitmap(file);
       const canvas = document.createElement("canvas");
-      const scale = Math.min(1, maxWidth / img.width);
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+      const scale = Math.min(1, 1000 / img.width);
+      canvas.width = img.width * scale; canvas.height = img.height * scale;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", quality));
+      const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.7));
       return new File([blob], file.name, { type: "image/jpeg" });
     }
 
-    async function uploadFiles() {
-      const files = document.getElementById("fileInput").files;
-      if (!files.length) return alert("Select images or PDFs first!");
+    document.getElementById("uploadBtn").addEventListener("click", async () => {
       const status = document.getElementById("status");
-      status.innerText = "Processing...";
-
-      let fullText = "";
-      for (const [i, f] of Array.from(files).entries()) {
-        status.innerText = `Processing file ${i+1} of ${files.length}...`;
-
-        let smallFile;
-        if (f.type.startsWith("image/")) {
-          smallFile = await compressImage(f);
+      try {
+        log("=== QUIZ GENERATION STARTED ===");
+        let fullText = "";
+        if (currentMode === "upload") {
+          const files = document.getElementById("fileInput").files;
+          if (!files.length) return alert("Select images!");
+          for (const f of Array.from(files)) {
+            status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">🔄 Processing ${f.name}...</div>`;
+            const smallFile = await compressImage(f);
+            const formData = new FormData(); formData.append("file", smallFile);
+            const ocrRes = await fetch("/functions/ocr", { method: "POST", body: formData });
+            const ocrData = await ocrRes.json();
+            fullText += (ocrData.text || "") + "\n\n";
+          }
         } else {
-          alert("PDF support coming soon — upload images for now.");
-          return;
+          fullText = questionsInput.value.trim();
+          if (!fullText) return alert("Paste questions!");
+          log(`Using pasted text: ${fullText.length} characters`);
         }
 
-        const formData = new FormData();
-        formData.append("file", smallFile);
-        const ocrRes = await fetch("/functions/ocr", { method: "POST", body: formData });
-        const text = await ocrRes.text();
-        fullText += text + "\n";
+        log("Sending text to AI for quiz generation...");
+        status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">🤖 Generating quiz...</div>`;
+        const quizRes = await fetch("/functions/quiz", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: fullText, questionCount: document.getElementById("questionCount")?.value || 30, mode: currentMode })
+        });
+        const quizResText = await quizRes.text();
+        log(`Quiz API response: status ${quizRes.status}`);
+        log(`Quiz response: ${quizResText.substring(0, 200)}...`);
+        const quiz = JSON.parse(quizResText);
+        log(`Quiz generated with ${quiz.questions?.length || 0} questions`);
+
+        log("Creating Google Form...");
+        status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">📝 Creating Google Form...</div>`;
+
+        // Use custom script URL if provided, otherwise use default
+        const customScriptUrl = document.getElementById("scriptUrl").value.trim();
+        const formPayload = customScriptUrl
+          ? { ...quiz, scriptUrl: customScriptUrl }
+          : quiz;
+
+        const formRes = await fetch("/functions/form", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formPayload)
+        });
+        const formData = await formRes.json();
+        log(`Form created: ${formData.formUrl}`);
+
+        status.innerHTML = `
+          <div class="space-y-4">
+            <div class="status-success p-4 rounded-lg">
+              <p class="font-semibold text-sm">✅ Quiz Generated Successfully!</p>
+            </div>
+            <a href="${formData.formUrl}" target="_blank" class="flex items-center justify-center gap-2 bg-[#673AB7] hover:bg-[#5e35b1] text-white px-4 py-3 rounded-lg font-medium text-sm shadow-sm">
+              Open Google Form
+            </a>
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <p class="text-xs font-semibold text-slate-700 mb-2">Quiz Details</p>
+              <p class="text-xs text-slate-600">Title: ${quiz.title || "Quiz"}</p>
+              <p class="text-xs text-slate-600">Questions: ${quiz.questions?.length || 0}</p>
+            </div>
+          </div>`;
+        log("=== QUIZ GENERATION COMPLETED ===", "success");
+      } catch (err) {
+        log(err.message, "error");
+        status.innerHTML = `<div class="status-error p-4 rounded-lg text-sm">❌ Error: ${err.message}</div>`;
       }
-
-      status.innerText = "Generating quiz...";
-      const quizRes = await fetch("/functions/quiz", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: fullText })
-      });
-      const quiz = await quizRes.json();
-
-      status.innerText = "Creating Google Form...";
-      const formRes = await fetch("/functions/form", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(quiz)
-      });
-      const { formUrl } = await formRes.json();
-
-      status.innerHTML = `
-        ✅ Quiz generated! <br>
-        <a href="${formUrl}" target="_blank" class="text-blue-600 hover:underline">Open Google Form</a><br><br>
-        <button id="downloadBtn" class="mt-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
-          Download JSON
-        </button>
-      `;
-
-      document.getElementById("downloadBtn").onclick = () => {
-        const blob = new Blob([JSON.stringify(quiz, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "quiz.json";
-        a.click();
-        URL.revokeObjectURL(url);
-      };
-    }
-
-    document.getElementById("uploadBtn").addEventListener("click", uploadFiles);
-
-    
+    });
+    log("Quiz Automation Tool initialized", "success");
   </script>
-
-  
-</body>
-</html>
+</body></html>
