@@ -5,11 +5,11 @@
   "account_id": "638ef62eed91c9067c44f0eac1068bb5",
   "workers_dev": true,
   "site": {
-    "bucket": "./public",       // your static HTML
-    "entry-point": "functions"  // your Worker functions folder
+    "bucket": "./public", // your static HTML
+    "entry-point": "functions" // your Worker functions folder
   },
   "vars": {
-    "GEMINI_API_KEY": "YOUR_GEMINI_API_KEY_HERE",
+    "GEMINI_API_KEY": "AIzaSyCTAqFsPwft2gJKS_uPPANuJxHPIReZuFAE",
     "FORM_SCRIPT_URL": "https://script.google.com/macros/s/AKfycbxq5adeWwp2qqM2mkkntqy7OssX7JCsVNsJcIzZb9iud4MPuvTyxr8ii__As1F2B9zz/exec"
   }
 }
