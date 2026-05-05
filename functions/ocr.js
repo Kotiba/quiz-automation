@@ -26,7 +26,7 @@ export async function onRequest({ request, env }) {
   const base64Data = arrayBufferToBase64(arrayBuffer);
   const mimeType = file.type || "image/jpeg";
 
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
 
   const res = await fetch(GEMINI_URL, {
     method: "POST",
