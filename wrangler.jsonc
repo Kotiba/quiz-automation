@@ -1,9 +1,5 @@
 {
   "name": "quiz-automation",
   "compatibility_date": "2024-04-01",
-  "pages_build_output_dir": "./public",
-  "vars": {
-    "GEMINI_API_KEY": "AIzaSyCTAqFsPwft2gJKS_uPPANuJxHPIReZuFAE",
-    "FORM_SCRIPT_URL": "https://script.google.com/macros/s/AKfycbxq5adeWwp2qqM2mkkntqy7OssX7JCsVNsJcIzZb9iud4MPuvTyxr8ii__As1F2B9zz/exec"
-  }
+  "pages_build_output_dir": "./public"
 }
