@@ -376,7 +376,7 @@
             const smallFile = await compressImage(f);
             const formData = new FormData();
             formData.append("file", smallFile);
-            const ocrRes = await fetch("/functions/ocr", { method: "POST", headers: getFormHeaders(), body: formData });
+            const ocrRes = await fetch("/ocr", { method: "POST", headers: getFormHeaders(), body: formData });
             if (!ocrRes.ok) throw new Error(`OCR failed: ${await ocrRes.text()}`);
             const ocrData = await ocrRes.json();
             if (ocrData.error) throw new Error(ocrData.error);
@@ -392,7 +392,7 @@
         log("Sending to Gemini for quiz generation...");
         status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">🤖 Generating quiz with Gemini...</div>`;
 
-        const quizRes = await fetch("/functions/quiz", {
+        const quizRes = await fetch("/quiz", {
           method: "POST",
           headers: getApiHeaders(),
           body: JSON.stringify({ text: fullText, questionCount, mode: currentMode })
@@ -410,7 +410,7 @@
         log("Creating Google Form...");
         status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">📝 Creating Google Form...</div>`;
 
-        const formRes = await fetch("/functions/form", {
+        const formRes = await fetch("/form", {
           method: "POST",
           headers: getApiHeaders(),
           body: JSON.stringify(quiz)
