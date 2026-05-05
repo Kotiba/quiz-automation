@@ -1,4 +1,5 @@
-export async function onRequestPost({ request, env }) {
+export async function onRequest({ request, env }) {
+  if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
   const GEMINI_API_KEY = request.headers.get("X-Gemini-Key") || env.GEMINI_API_KEY;
 
   if (!GEMINI_API_KEY) {

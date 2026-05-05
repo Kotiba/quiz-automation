@@ -1,4 +1,5 @@
-export async function onRequestPost({ request, env }) {
+export async function onRequest({ request, env }) {
+  if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
   const quiz = await request.json();
 
   const SCRIPT_URL = env.FORM_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbxq5adeWwp2qqM2mkkntqy7OssX7JCsVNsJcIzZb9iud4MPuvTyxr8ii__As1F2B9zz/exec";
