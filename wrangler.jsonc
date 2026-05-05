@@ -11,6 +11,6 @@
   "vars": {
     "OCR_API_KEY": "K86505009988957",
     "DEEPSEEK_API_KEY": "sk-a20581681d33430ab9e8428a90117e0f",
-    "FORM_SCRIPT_URL": "https://script.google.com/macros/s/AKfycbwDWoDxG-WQYfokGS7d7PlDA3X8q1E9sGTnIZLqK3AhDRBB3zIaN6yMPURyICLOJ3cs8A/exec"
+    "FORM_SCRIPT_URL": "https://script.google.com/macros/s/AKfycbxq5adeWwp2qqM2mkkntqy7OssX7JCsVNsJcIzZb9iud4MPuvTyxr8ii__As1F2B9zz/exec"
   }
 }
