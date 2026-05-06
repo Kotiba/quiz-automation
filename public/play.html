@@ -142,6 +142,37 @@ let quiz=null, questions=[], current=0, selected=null, answered=false, mode='pra
 const app=document.getElementById('app');
 const badge=document.getElementById('modeBadge');
 
+// ── Audio ─────────────────────────────────────────────────────────────────
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let actx = null;
+function playSound(type) {
+  try {
+    if(!actx) actx = new AudioCtx();
+    if(actx.state === 'suspended') actx.resume();
+    const osc = actx.createOscillator(), g = actx.createGain();
+    osc.connect(g); g.connect(actx.destination);
+    const now = actx.currentTime;
+    if (type === 'correct') {
+      osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, now); osc.frequency.exponentialRampToValueAtTime(1046.50, now+0.1);
+      g.gain.setValueAtTime(0.5, now); g.gain.exponentialRampToValueAtTime(0.01, now+0.2);
+      osc.start(now); osc.stop(now+0.2);
+    } else if (type === 'wrong') {
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(80, now+0.2);
+      g.gain.setValueAtTime(0.3, now); g.gain.exponentialRampToValueAtTime(0.01, now+0.2);
+      osc.start(now); osc.stop(now+0.2);
+    } else if (type === 'pass') {
+      osc.type = 'sine';
+      [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => osc.frequency.setValueAtTime(f, now + i*0.1));
+      g.gain.setValueAtTime(0.4, now); g.gain.setValueAtTime(0.4, now+0.3); g.gain.exponentialRampToValueAtTime(0.01, now+0.8);
+      osc.start(now); osc.stop(now+0.8);
+    } else if (type === 'fail') {
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(150, now+0.6);
+      g.gain.setValueAtTime(0.4, now); g.gain.exponentialRampToValueAtTime(0.01, now+0.6);
+      osc.start(now); osc.stop(now+0.6);
+    }
+  } catch(e) { console.error('Audio failed', e); }
+}
+
 // ── Load quiz ─────────────────────────────────────────────────────────────
 async function loadQuiz(){
   const p=new URLSearchParams(location.search);
@@ -249,9 +280,11 @@ function reveal(){
   const fb=document.getElementById('fb');
   fb.style.display='block';
   if(ok){
+    playSound('correct');
     fb.className='feedback fb-correct';
     fb.innerHTML=`✅ Correct!${q.explanation?`<div class="fb-exp">💡 ${esc(q.explanation)}</div>`:''}`;
   } else {
+    playSound('wrong');
     fb.className='feedback fb-wrong';
     fb.innerHTML=`❌ Incorrect — Correct: <strong>${esc(q.correctAnswer.replace(/^[A-D]\)\s*/,''))}</strong>${q.explanation?`<div class="fb-exp">💡 ${esc(q.explanation)}</div>`:''}`;
   }
@@ -282,6 +315,8 @@ function showScore(){
       ${r.q.explanation?`<div class="rev-exp">💡 ${esc(r.q.explanation)}</div>`:''}
     </div>`;
   }).join('');
+
+  playSound(passed ? 'pass' : 'fail');
 
   app.innerHTML=`
     <div class="score">
