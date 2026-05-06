@@ -337,12 +337,27 @@ async function gen(){
       setS('loading','🤖 Generating quiz...');
       quiz=await callQuiz(fullText,document.getElementById('qc').value||15,apiKey);
     }
-    // Encode to URL
-    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(quiz))));
-    quizUrl=`${location.origin}/play?q=${encoded}`;
-    document.getElementById('rTitle').textContent=quiz.title||'Your Quiz';
-    document.getElementById('rMeta').textContent=`${quiz.questions.length} questions · Ready to play`;
-    document.getElementById('startBtn').href=quizUrl;
+    // Save to KV and get short URL
+    setS('loading','🔗 Saving quiz...');
+    let shortId = null;
+    try {
+      const saveRes = await fetch('/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quiz)
+      });
+      const saveData = await saveRes.json();
+      if (saveData.id) { shortId = saveData.id; log(`Saved as: ${shortId}`,'s'); }
+    } catch(e) { log('KV save failed, using URL fallback','e'); }
+
+    // Build URLs
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(quiz))));
+    const fallbackUrl = `${location.origin}/play?q=${encoded}`;
+    quizUrl = shortId ? `${location.origin}/play?id=${shortId}` : fallbackUrl;
+    const displayUrl = shortId ? `quiz-automation.pages.dev/play?id=${shortId}` : '(long URL — KV not set up)';
+    document.getElementById('rTitle').textContent = quiz.title||'Your Quiz';
+    document.getElementById('rMeta').textContent = `${quiz.questions.length} questions · ${displayUrl}`;
+    document.getElementById('startBtn').href = quizUrl;
     document.getElementById('result').classList.add('show');
     setS('success',`✅ Quiz ready — ${quiz.questions.length} questions generated!`);
     log('Done!','s');

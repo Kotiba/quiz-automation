@@ -3,512 +3,320 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quiz Player</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <title>QuizCraft — Quiz Player</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#f8f9fc;--white:#fff;--border:#e5e7eb;--text:#111827;
+      --muted:#6b7280;--accent:#6366f1;--accent-light:#eef2ff;
+      --green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;
+      --red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;
+      --radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08);
+    }
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0 0 64px}
 
-    :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --surface2: #22263a;
-      --border: #2e3250;
-      --text: #e8eaf6;
-      --muted: #8b91b3;
-      --accent: #6c63ff;
-      --accent2: #4fd1c5;
-      --green: #22c55e;
-      --red: #ef4444;
-      --yellow: #f59e0b;
-      --radius: 14px;
-    }
+    nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between}
+    .nav-logo{font-size:17px;font-weight:800;letter-spacing:-.02em;text-decoration:none;color:var(--text)}
+    .nav-logo span{color:var(--accent)}
+    .nav-badge{font-size:11px;font-weight:700;background:var(--accent-light);color:var(--accent);padding:3px 9px;border-radius:20px}
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 24px 16px 48px;
-    }
+    .wrap{max-width:680px;margin:32px auto;padding:0 16px}
 
-    /* Header */
-    .header {
-      width: 100%;
-      max-width: 720px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 32px;
-    }
-    .logo { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .05em; }
-    .mode-badge {
-      font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-      background: var(--accent); color: #fff;
-      padding: 4px 10px; border-radius: 20px;
-    }
-
-    /* Card */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 36px;
-      width: 100%;
-      max-width: 720px;
-      animation: fadeUp .35s ease;
-    }
-    @keyframes fadeUp {
-      from { opacity:0; transform: translateY(14px); }
-      to   { opacity:1; transform: translateY(0); }
-    }
+    .card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow);animation:up .3s ease}
+    @keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
     /* Progress */
-    .progress-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-    .progress-bar {
-      width: 100%; height: 6px;
-      background: var(--surface2);
-      border-radius: 99px;
-      overflow: hidden;
-      margin-bottom: 28px;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      border-radius: 99px;
-      transition: width .4s ease;
-    }
+    .prog-row{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:8px}
+    .prog-bar{height:6px;background:var(--bg);border-radius:99px;overflow:hidden;margin-bottom:24px;border:1px solid var(--border)}
+    .prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),#818cf8);border-radius:99px;transition:width .4s ease}
 
     /* Question */
-    .question-number {
-      font-size: 11px; font-weight: 700; color: var(--accent);
-      letter-spacing: .1em; text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-    .question-text {
-      font-size: 20px; font-weight: 700;
-      line-height: 1.5;
-      margin-bottom: 28px;
-    }
+    .q-num{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+    .q-text{font-size:20px;font-weight:700;line-height:1.5;margin-bottom:24px}
 
     /* Options */
-    .options { display: flex; flex-direction: column; gap: 12px; }
-    .option {
-      display: flex; align-items: center; gap: 14px;
-      background: var(--surface2);
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 18px;
-      cursor: pointer;
-      font-size: 15px; font-weight: 500;
-      transition: all .18s ease;
-      user-select: none;
-    }
-    .option:hover:not(.locked) {
-      border-color: var(--accent);
-      background: #2a2d45;
-      transform: translateY(-1px);
-    }
-    .option .key {
-      min-width: 28px; height: 28px;
-      background: var(--border);
-      border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; color: var(--muted);
-      transition: all .18s;
-    }
-    .option.selected { border-color: var(--accent); background: #2a2d45; }
-    .option.selected .key { background: var(--accent); color: #fff; }
-    .option.correct { border-color: var(--green) !important; background: #052e16 !important; }
-    .option.correct .key { background: var(--green) !important; color: #fff !important; }
-    .option.wrong { border-color: var(--red) !important; background: #1e0606 !important; }
-    .option.wrong .key { background: var(--red) !important; color: #fff !important; }
-    .option.locked { cursor: default; }
+    .options{display:flex;flex-direction:column;gap:10px}
+    .opt{display:flex;align-items:center;gap:12px;border:2px solid var(--border);border-radius:10px;padding:13px 16px;cursor:pointer;font-size:15px;font-weight:500;transition:.15s;background:var(--white);text-align:left;width:100%;font-family:'Inter',sans-serif;color:var(--text)}
+    .opt:hover:not(.locked){border-color:var(--accent);background:var(--accent-light)}
+    .opt-key{min-width:28px;height:28px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);border:1px solid var(--border);flex-shrink:0;transition:.15s}
+    .opt.selected{border-color:var(--accent);background:var(--accent-light)}
+    .opt.selected .opt-key{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .opt.correct{border-color:var(--green)!important;background:var(--green-light)!important}
+    .opt.correct .opt-key{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
+    .opt.wrong{border-color:var(--red)!important;background:var(--red-light)!important}
+    .opt.wrong .opt-key{background:var(--red)!important;color:#fff!important;border-color:var(--red)!important}
+    .opt.locked{cursor:default}
 
     /* Feedback */
-    .feedback {
-      margin-top: 20px;
-      padding: 14px 18px;
-      border-radius: 10px;
-      font-size: 14px; font-weight: 500;
-      display: none;
-      animation: fadeUp .25s ease;
-    }
-    .feedback.correct { background: #052e16; border: 1px solid #16a34a; color: #86efac; }
-    .feedback.wrong   { background: #1e0606; border: 1px solid #dc2626; color: #fca5a5; }
-    .feedback .explanation { margin-top: 6px; font-size: 13px; font-weight: 400; opacity: .85; }
+    .feedback{margin-top:16px;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:500;display:none;animation:up .2s ease}
+    .fb-correct{background:var(--green-light);border:1px solid var(--green-border);color:var(--green)}
+    .fb-wrong{background:var(--red-light);border:1px solid var(--red-border);color:var(--red)}
+    .fb-exp{margin-top:5px;font-size:13px;font-weight:400;color:var(--muted)}
 
     /* Buttons */
-    .btn-row { margin-top: 28px; display: flex; gap: 12px; }
-    .btn {
-      padding: 12px 24px;
-      border-radius: 10px;
-      border: none;
-      font-size: 15px; font-weight: 600;
-      cursor: pointer;
-      transition: all .18s;
-      font-family: 'Inter', sans-serif;
-    }
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-      flex: 1;
-    }
-    .btn-primary:hover { background: #5a52e0; transform: translateY(-1px); }
-    .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-    .btn-ghost {
-      background: var(--surface2);
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
-    .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
-
-    /* Score screen */
-    .score-screen { text-align: center; }
-    .score-circle {
-      width: 140px; height: 140px;
-      border-radius: 50%;
-      border: 6px solid var(--accent);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      margin: 0 auto 24px;
-      background: #1a1d27;
-    }
-    .score-pct { font-size: 36px; font-weight: 800; color: var(--accent); }
-    .score-label { font-size: 12px; color: var(--muted); font-weight: 500; }
-    .score-title { font-size: 26px; font-weight: 800; margin-bottom: 8px; }
-    .score-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
-    .stat-row {
-      display: flex; gap: 12px; justify-content: center;
-      margin-bottom: 28px; flex-wrap: wrap;
-    }
-    .stat {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 22px;
-      min-width: 100px;
-    }
-    .stat-val { font-size: 24px; font-weight: 800; }
-    .stat-key { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 2px; }
-    .stat.green .stat-val { color: var(--green); }
-    .stat.red   .stat-val { color: var(--red); }
-
-    /* Review */
-    .review { margin-top: 28px; text-align: left; }
-    .review-title {
-      font-size: 13px; font-weight: 700; letter-spacing: .08em;
-      text-transform: uppercase; color: var(--muted);
-      margin-bottom: 14px;
-    }
-    .review-item {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 10px;
-    }
-    .review-item.r-correct { border-color: #16a34a; }
-    .review-item.r-wrong   { border-color: #dc2626; }
-    .review-q { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
-    .review-ans { font-size: 13px; margin-bottom: 3px; }
-    .review-ans.ans-correct { color: var(--green); }
-    .review-ans.ans-wrong   { color: var(--red); }
-    .review-exp { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .btn-row{margin-top:20px;display:flex;gap:10px}
+    .btn{padding:12px 20px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:.15s}
+    .btn-primary{background:var(--accent);color:#fff;flex:1}
+    .btn-primary:hover{background:#4f46e5}
+    .btn-primary:disabled{opacity:.35;cursor:not-allowed}
+    .btn-ghost{background:var(--white);color:var(--muted);border:1.5px solid var(--border)}
+    .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
 
     /* Start screen */
-    .start-screen { text-align: center; }
-    .quiz-icon { font-size: 56px; margin-bottom: 16px; }
-    .quiz-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
-    .quiz-meta { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
-    .mode-select { display: flex; gap: 12px; margin-bottom: 32px; justify-content: center; }
-    .mode-card {
-      flex: 1; max-width: 200px;
-      background: var(--surface2);
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      padding: 18px;
-      cursor: pointer;
-      transition: all .18s;
-      text-align: left;
-    }
-    .mode-card:hover, .mode-card.active { border-color: var(--accent); }
-    .mode-card.active { background: #22263a; }
-    .mode-icon { font-size: 22px; margin-bottom: 8px; }
-    .mode-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-    .mode-desc { font-size: 12px; color: var(--muted); }
+    .start{text-align:center;padding:8px 0}
+    .start-icon{font-size:48px;margin-bottom:12px}
+    .start h1{font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:-.02em}
+    .start-meta{font-size:14px;color:var(--muted);margin-bottom:28px}
+    .mode-row{display:flex;gap:10px;justify-content:center;margin-bottom:28px}
+    .mode-btn{flex:1;max-width:190px;border:2px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;text-align:left;background:var(--white);transition:.15s;font-family:'Inter',sans-serif}
+    .mode-btn:hover,.mode-btn.active{border-color:var(--accent);background:var(--accent-light)}
+    .mode-icon{font-size:20px;margin-bottom:6px}
+    .mode-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+    .mode-desc{font-size:11px;color:var(--muted)}
 
-    /* Error */
-    .error-screen { text-align: center; padding: 40px; }
-    .error-screen h2 { font-size: 22px; margin-bottom: 12px; color: var(--red); }
-    .error-screen p { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+    /* Score screen */
+    .score{text-align:center}
+    .score-ring{width:120px;height:120px;border-radius:50%;border:5px solid var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 20px;background:var(--accent-light)}
+    .score-pct{font-size:32px;font-weight:800;color:var(--accent)}
+    .score-lbl{font-size:11px;color:var(--muted);font-weight:600}
+    .score h2{font-size:24px;font-weight:800;margin-bottom:6px}
+    .score-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
+    .stats{display:flex;gap:10px;justify-content:center;margin-bottom:24px;flex-wrap:wrap}
+    .stat{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 20px;min-width:90px}
+    .stat-val{font-size:22px;font-weight:800}
+    .stat-key{font-size:11px;color:var(--muted);font-weight:500}
+    .stat.g .stat-val{color:var(--green)}
+    .stat.r .stat-val{color:var(--red)}
+    .score-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:28px}
+    .btn-retake{padding:12px 22px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif}
+    .btn-retake:hover{background:#4f46e5}
+    .btn-share{padding:12px 22px;border-radius:8px;border:1.5px solid var(--border);background:var(--white);color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+    .btn-share:hover{border-color:var(--accent);color:var(--accent)}
 
-    @media (max-width: 520px) {
-      .card { padding: 22px 16px; }
-      .question-text { font-size: 17px; }
-      .mode-select { flex-direction: column; align-items: center; }
-      .mode-card { max-width: 100%; width: 100%; }
+    /* Review */
+    .review-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;text-align:left}
+    .rev-item{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;text-align:left}
+    .rev-item.rc{border-color:var(--green)}
+    .rev-item.rw{border-color:var(--red)}
+    .rev-q{font-size:14px;font-weight:600;margin-bottom:6px}
+    .rev-a{font-size:13px;margin-bottom:2px}
+    .rev-a.ac{color:var(--green)}
+    .rev-a.aw{color:var(--red)}
+    .rev-exp{font-size:12px;color:var(--muted);margin-top:4px}
+
+    /* Error/loading */
+    .center-msg{text-align:center;padding:40px}
+    .center-msg h2{font-size:20px;margin-bottom:8px}
+    .center-msg p{color:var(--muted);font-size:14px;margin-bottom:16px}
+    .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    @media(max-width:520px){
+      .card{padding:18px}
+      .q-text{font-size:17px}
+      .mode-row{flex-direction:column;align-items:center}
+      .mode-btn{max-width:100%;width:100%}
     }
   </style>
 </head>
 <body>
 
-<div class="header">
-  <span class="logo">📚 QUIZ PLAYER</span>
-  <span class="mode-badge" id="modeBadge">Practice</span>
-</div>
+<nav>
+  <a class="nav-logo" href="/">Quiz<span>Craft</span></a>
+  <div class="nav-badge" id="modeBadge">Practice</div>
+</nav>
 
-<div class="card" id="app">
-  <div class="error-screen">
-    <h2>Loading quiz...</h2>
-    <p>If this persists, the quiz link may be invalid.</p>
+<div class="wrap">
+  <div class="card" id="app">
+    <div class="center-msg">
+      <div class="spinner"></div>
+      <p>Loading quiz...</p>
+    </div>
   </div>
 </div>
 
 <script>
-// ─── Data ──────────────────────────────────────────────────────────────────
-function loadQuiz() {
-  try {
-    const params = new URLSearchParams(location.search);
-    const raw = params.get('q');
-    if (!raw) return null;
-    return JSON.parse(atob(raw));
-  } catch (e) { return null; }
+// ── State ─────────────────────────────────────────────────────────────────
+let quiz=null, questions=[], current=0, selected=null, answered=false, mode='practice', results=[];
+const app=document.getElementById('app');
+const badge=document.getElementById('modeBadge');
+
+// ── Load quiz ─────────────────────────────────────────────────────────────
+async function loadQuiz(){
+  const p=new URLSearchParams(location.search);
+  // KV-based short ID
+  if(p.get('id')){
+    try{
+      const r=await fetch(`/load?id=${encodeURIComponent(p.get('id'))}`);
+      if(!r.ok) throw new Error('Not found');
+      return await r.json();
+    }catch(e){ showError('Quiz not found or has expired.'); return null; }
+  }
+  // Fallback: base64 in URL
+  if(p.get('q')){
+    try{ return JSON.parse(decodeURIComponent(escape(atob(p.get('q'))))); }
+    catch(e){ showError('Invalid quiz link.'); return null; }
+  }
+  showError('No quiz found. Please generate one first.');
+  return null;
 }
 
-// ─── State ─────────────────────────────────────────────────────────────────
-let quiz = null;
-let questions = [];
-let current = 0;
-let selected = null;
-let answered = false;
-let mode = 'practice'; // 'practice' | 'exam'
-let results = []; // { question, selected, correct, isCorrect }
+function showError(msg){
+  app.innerHTML=`<div class="center-msg">
+    <h2>❌ Error</h2><p>${msg}</p>
+    <a href="/" class="btn btn-primary" style="text-decoration:none;display:inline-block">← Create Quiz</a>
+  </div>`;
+}
 
-// ─── Render helpers ────────────────────────────────────────────────────────
-const app = document.getElementById('app');
-const badge = document.getElementById('modeBadge');
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-function render(html) { app.innerHTML = html; app.className = 'card'; }
-
-// ─── Screens ───────────────────────────────────────────────────────────────
-function showStart() {
-  document.title = quiz.title || 'Quiz';
-  render(`
-    <div class="start-screen">
-      <div class="quiz-icon">📝</div>
-      <h1 class="quiz-title">${esc(quiz.title || 'Quiz')}</h1>
-      <p class="quiz-meta">${questions.length} questions &nbsp;·&nbsp; Select a mode to begin</p>
-      <div class="mode-select">
-        <div class="mode-card active" id="mPractice" onclick="setMode('practice')">
+// ── Screens ───────────────────────────────────────────────────────────────
+function showStart(){
+  document.title=quiz.title||'Quiz';
+  app.innerHTML=`
+    <div class="start">
+      <div class="start-icon">📝</div>
+      <h1>${esc(quiz.title||'Quiz')}</h1>
+      <div class="start-meta">${questions.length} questions · Select a mode to begin</div>
+      <div class="mode-row">
+        <button class="mode-btn active" id="mPractice" onclick="setMode('practice')">
           <div class="mode-icon">🎯</div>
           <div class="mode-name">Practice Mode</div>
-          <div class="mode-desc">See correct answer after each question</div>
-        </div>
-        <div class="mode-card" id="mExam" onclick="setMode('exam')">
+          <div class="mode-desc">See answer after each question</div>
+        </button>
+        <button class="mode-btn" id="mExam" onclick="setMode('exam')">
           <div class="mode-icon">📋</div>
           <div class="mode-name">Exam Mode</div>
-          <div class="mode-desc">All results shown at the end</div>
-        </div>
+          <div class="mode-desc">Results shown at the end</div>
+        </button>
       </div>
-      <button class="btn btn-primary" onclick="startQuiz()" style="max-width:280px;margin:0 auto;display:block;">
-        Start Quiz →
-      </button>
-    </div>
-  `);
+      <button class="btn btn-primary" onclick="startQuiz()" style="max-width:260px;margin:0 auto;display:block">Start Quiz →</button>
+    </div>`;
 }
 
-function setMode(m) {
-  mode = m;
-  badge.textContent = m === 'practice' ? 'Practice' : 'Exam';
-  document.getElementById('mPractice').classList.toggle('active', m === 'practice');
-  document.getElementById('mExam').classList.toggle('active', m === 'exam');
+function setMode(m){
+  mode=m; badge.textContent=m==='practice'?'Practice':'Exam';
+  document.getElementById('mPractice').classList.toggle('active',m==='practice');
+  document.getElementById('mExam').classList.toggle('active',m==='exam');
 }
 
-function startQuiz() {
-  current = 0; results = []; selected = null; answered = false;
-  showQuestion();
-}
+function startQuiz(){ current=0; results=[]; selected=null; answered=false; showQ(); }
 
-function showQuestion() {
-  const q = questions[current];
-  const pct = (current / questions.length) * 100;
-  selected = null; answered = false;
-
-  render(`
-    <div class="progress-row">
-      <span>Question ${current + 1} of ${questions.length}</span>
-      <span>${Math.round(pct)}%</span>
+function showQ(){
+  const q=questions[current]; selected=null; answered=false;
+  const pct=(current/questions.length)*100;
+  app.innerHTML=`
+    <div class="prog-row"><span>Question ${current+1} of ${questions.length}</span><span>${Math.round(pct)}%</span></div>
+    <div class="prog-bar"><div class="prog-fill" id="pf" style="width:${pct}%"></div></div>
+    <div class="q-num">Question ${current+1}</div>
+    <div class="q-text">${esc(q.question)}</div>
+    <div class="options">
+      ${q.options.map((o,i)=>`
+        <button class="opt" id="o${i}" onclick="pick(${i})">
+          <span class="opt-key">${['A','B','C','D'][i]}</span>
+          <span>${esc(o.replace(/^[A-D]\)\s*/,''))}</span>
+        </button>`).join('')}
     </div>
-    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-
-    <div class="question-number">Question ${current + 1}</div>
-    <div class="question-text">${esc(q.question)}</div>
-
-    <div class="options" id="opts">
-      ${q.options.map((opt, i) => `
-        <div class="option" id="opt${i}" onclick="selectOption(${i})" data-i="${i}">
-          <span class="key">${['A','B','C','D'][i]}</span>
-          <span>${esc(opt.replace(/^[A-D]\)\s*/,''))}</span>
-        </div>
-      `).join('')}
-    </div>
-
-    <div class="feedback" id="feedback"></div>
-
+    <div class="feedback" id="fb"></div>
     <div class="btn-row">
-      <button class="btn btn-primary" id="nextBtn" onclick="nextAction()" disabled>
-        ${current < questions.length - 1 ? 'Next Question →' : 'See Results'}
+      <button class="btn btn-primary" id="nb" onclick="next()" disabled>
+        ${current<questions.length-1?'Next →':'See Results'}
       </button>
-    </div>
-  `);
+    </div>`;
 }
 
-function selectOption(i) {
-  if (answered) return;
-  selected = i;
-  document.querySelectorAll('.option').forEach((el, idx) => {
-    el.classList.toggle('selected', idx === i);
-  });
-  document.getElementById('nextBtn').disabled = false;
-
-  if (mode === 'practice') {
-    revealAnswer();
-  }
+function pick(i){
+  if(answered) return;
+  selected=i;
+  document.querySelectorAll('.opt').forEach((el,idx)=>el.classList.toggle('selected',idx===i));
+  document.getElementById('nb').disabled=false;
+  if(mode==='practice') reveal();
 }
 
-function revealAnswer() {
-  answered = true;
-  const q = questions[current];
-  const correctText = q.correctAnswer.replace(/^[A-D]\)\s*/, '').trim();
-  const correctIdx = q.options.findIndex(o => o.replace(/^[A-D]\)\s*/, '').trim() === correctText);
-  const isCorrect = selected === correctIdx;
-
-  results.push({ q, selectedIdx: selected, correctIdx, isCorrect });
-
-  document.querySelectorAll('.option').forEach((el, idx) => {
+function reveal(){
+  answered=true;
+  const q=questions[current];
+  const cText=q.correctAnswer.replace(/^[A-D]\)\s*/,'').trim();
+  const cIdx=q.options.findIndex(o=>o.replace(/^[A-D]\)\s*/,'').trim()===cText);
+  const ok=selected===cIdx;
+  results.push({q,selectedIdx:selected,correctIdx:cIdx,isCorrect:ok});
+  document.querySelectorAll('.opt').forEach((el,i)=>{
     el.classList.add('locked');
-    if (idx === correctIdx) el.classList.add('correct');
-    else if (idx === selected && !isCorrect) el.classList.add('wrong');
+    if(i===cIdx) el.classList.add('correct');
+    else if(i===selected&&!ok) el.classList.add('wrong');
   });
-
-  const fb = document.getElementById('feedback');
-  fb.style.display = 'block';
-  if (isCorrect) {
-    fb.className = 'feedback correct';
-    fb.innerHTML = `✅ Correct!${q.explanation ? `<div class="explanation">${esc(q.explanation)}</div>` : ''}`;
+  const fb=document.getElementById('fb');
+  fb.style.display='block';
+  if(ok){
+    fb.className='feedback fb-correct';
+    fb.innerHTML=`✅ Correct!${q.explanation?`<div class="fb-exp">💡 ${esc(q.explanation)}</div>`:''}`;
   } else {
-    fb.className = 'feedback wrong';
-    fb.innerHTML = `❌ Incorrect — Correct answer: <strong>${esc(q.correctAnswer.replace(/^[A-D]\)\s*/,''))}</strong>${q.explanation ? `<div class="explanation">${esc(q.explanation)}</div>` : ''}`;
+    fb.className='feedback fb-wrong';
+    fb.innerHTML=`❌ Incorrect — Correct: <strong>${esc(q.correctAnswer.replace(/^[A-D]\)\s*/,''))}</strong>${q.explanation?`<div class="fb-exp">💡 ${esc(q.explanation)}</div>`:''}`;
   }
 }
 
-function nextAction() {
-  if (!answered && mode === 'exam') {
-    if (selected === null) return;
-    const q = questions[current];
-    const correctText = q.correctAnswer.replace(/^[A-D]\)\s*/, '').trim();
-    const correctIdx = q.options.findIndex(o => o.replace(/^[A-D]\)\s*/, '').trim() === correctText);
-    results.push({ q, selectedIdx: selected, correctIdx, isCorrect: selected === correctIdx });
-    answered = true;
+function next(){
+  if(!answered&&mode==='exam'&&selected!==null){
+    const q=questions[current];
+    const cText=q.correctAnswer.replace(/^[A-D]\)\s*/,'').trim();
+    const cIdx=q.options.findIndex(o=>o.replace(/^[A-D]\)\s*/,'').trim()===cText);
+    results.push({q,selectedIdx:selected,correctIdx:cIdx,isCorrect:selected===cIdx});
+    answered=true;
   }
-  if (current < questions.length - 1) {
-    current++;
-    showQuestion();
-  } else {
-    showScore();
-  }
+  if(current<questions.length-1){ current++; showQ(); }
+  else showScore();
 }
 
-function showScore() {
-  const total = results.length;
-  const correct = results.filter(r => r.isCorrect).length;
-  const pct = Math.round((correct / total) * 100);
-  const passed = pct >= 70;
-
-  const reviewHtml = results.map((r, i) => {
-    const selText = r.selectedIdx !== null ? r.q.options[r.selectedIdx].replace(/^[A-D]\)\s*/,'') : 'No answer';
-    const corText = r.q.options[r.correctIdx].replace(/^[A-D]\)\s*/,'');
-    return `
-      <div class="review-item ${r.isCorrect ? 'r-correct' : 'r-wrong'}">
-        <div class="review-q">${i+1}. ${esc(r.q.question)}</div>
-        ${!r.isCorrect ? `<div class="review-ans ans-wrong">✗ Your answer: ${esc(selText)}</div>` : ''}
-        <div class="review-ans ans-correct">✓ Correct: ${esc(corText)}</div>
-        ${r.q.explanation ? `<div class="review-exp">💡 ${esc(r.q.explanation)}</div>` : ''}
-      </div>`;
+function showScore(){
+  const total=results.length, correct=results.filter(r=>r.isCorrect).length;
+  const pct=Math.round(correct/total*100), passed=pct>=70;
+  const review=results.map((r,i)=>{
+    const sel=r.selectedIdx!==null?r.q.options[r.selectedIdx].replace(/^[A-D]\)\s*/,''):'No answer';
+    const cor=r.q.options[r.correctIdx].replace(/^[A-D]\)\s*/,'');
+    return `<div class="rev-item ${r.isCorrect?'rc':'rw'}">
+      <div class="rev-q">${i+1}. ${esc(r.q.question)}</div>
+      ${!r.isCorrect?`<div class="rev-a aw">✗ Your answer: ${esc(sel)}</div>`:''}
+      <div class="rev-a ac">✓ Correct: ${esc(cor)}</div>
+      ${r.q.explanation?`<div class="rev-exp">💡 ${esc(r.q.explanation)}</div>`:''}
+    </div>`;
   }).join('');
 
-  render(`
-    <div class="score-screen">
-      <div class="score-circle">
-        <div class="score-pct">${pct}%</div>
-        <div class="score-label">Score</div>
-      </div>
-      <h2 class="score-title">${passed ? '🎉 Passed!' : '📚 Keep Studying'}</h2>
-      <p class="score-sub">${passed ? 'Great work — you passed this quiz.' : 'Review the material and try again.'}</p>
-      <div class="stat-row">
-        <div class="stat green"><div class="stat-val">${correct}</div><div class="stat-key">Correct</div></div>
-        <div class="stat red"><div class="stat-val">${total - correct}</div><div class="stat-key">Wrong</div></div>
+  app.innerHTML=`
+    <div class="score">
+      <div class="score-ring"><div class="score-pct">${pct}%</div><div class="score-lbl">Score</div></div>
+      <h2>${passed?'🎉 Passed!':'📚 Keep Studying'}</h2>
+      <div class="score-sub">${correct} of ${total} correct${passed?' — Great work!':', review and try again.'}</div>
+      <div class="stats">
+        <div class="stat g"><div class="stat-val">${correct}</div><div class="stat-key">Correct</div></div>
+        <div class="stat r"><div class="stat-val">${total-correct}</div><div class="stat-key">Wrong</div></div>
         <div class="stat"><div class="stat-val">${total}</div><div class="stat-key">Total</div></div>
       </div>
-      <div class="btn-row" style="justify-content:center;gap:12px;flex-wrap:wrap;">
-        <button class="btn btn-primary" onclick="startQuiz()">🔄 Retake Quiz</button>
-        <button class="btn btn-ghost" onclick="copyLink()">🔗 Share Quiz</button>
-        <button class="btn btn-ghost" onclick="window.location.href='/'">← Create New</button>
+      <div class="score-actions">
+        <button class="btn-retake" onclick="startQuiz()">🔄 Retake</button>
+        <button class="btn-share" onclick="copyLink()">🔗 Share Quiz</button>
+        <a href="/" class="btn-share" style="text-decoration:none">← New Quiz</a>
       </div>
-      <div class="review" id="review">
-        <div class="review-title">Answer Review</div>
-        ${reviewHtml}
-      </div>
-    </div>
-  `);
+      <div class="review-title">Answer Review</div>
+      ${review}
+    </div>`;
 }
 
-function copyLink() {
-  navigator.clipboard.writeText(location.href).then(() => alert('Quiz link copied!'));
-}
-
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function copyLink(){ navigator.clipboard.writeText(location.href).then(()=>alert('Link copied!')); }
 
 // Keyboard shortcuts
-document.addEventListener('keydown', e => {
-  if (['a','b','c','d'].includes(e.key.toLowerCase())) {
-    const i = ['a','b','c','d'].indexOf(e.key.toLowerCase());
-    const opt = document.getElementById('opt' + i);
-    if (opt) opt.click();
-  }
-  if (e.key === 'Enter' || e.key === 'ArrowRight') {
-    const btn = document.getElementById('nextBtn');
-    if (btn && !btn.disabled) btn.click();
-  }
+document.addEventListener('keydown',e=>{
+  const i=['a','b','c','d'].indexOf(e.key.toLowerCase());
+  if(i>=0){ const o=document.getElementById('o'+i); if(o) o.click(); }
+  if(e.key==='Enter'||e.key==='ArrowRight'){ const b=document.getElementById('nb'); if(b&&!b.disabled) b.click(); }
 });
 
-// ─── Init ──────────────────────────────────────────────────────────────────
-quiz = loadQuiz();
-if (!quiz || !quiz.questions || !quiz.questions.length) {
-  render(`
-    <div class="error-screen">
-      <h2>❌ Invalid Quiz Link</h2>
-      <p>This quiz link is missing or corrupted. Please generate a new quiz.</p>
-      <a href="/" class="btn btn-primary" style="display:inline-block;text-decoration:none;">← Go to Creator</a>
-    </div>
-  `);
-} else {
-  questions = quiz.questions;
-  showStart();
-}
+// ── Init ──────────────────────────────────────────────────────────────────
+loadQuiz().then(q=>{
+  if(!q||!q.questions?.length) return;
+  quiz=q; questions=q.questions; showStart();
+});
 </script>
 </body>
 </html>
