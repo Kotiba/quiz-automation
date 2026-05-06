@@ -1,444 +1,520 @@
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="en">
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quiz Automation</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>QuizCraft — AI Quiz Generator</title>
+  <meta name="description" content="Convert notes, images, or CSV into interactive quizzes instantly using AI.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
-    * {
-      font-family: 'Inter', system-ui, sans-serif;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
+      --border: #2e3250; --text: #e8eaf6; --muted: #8b91b3;
+      --accent: #6c63ff; --accent2: #4fd1c5;
+      --green: #22c55e; --red: #ef4444;
+      --radius: 14px;
     }
-
     body {
-      background: linear-gradient(135deg, #fafbfc 0%, #f3f4f6 100%);
-      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; padding: 32px 16px 64px;
     }
+    .wrap { max-width: 760px; margin: 0 auto; }
 
-    button, input, a {
-      transition: all 0.2s ease-out;
+    /* Header */
+    .header { margin-bottom: 40px; }
+    .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+    .logo-icon { font-size: 36px; }
+    .logo-text { font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+    .logo-text span { color: var(--accent); }
+    .tagline { color: var(--muted); font-size: 14px; margin-left: 50px; }
+
+    /* Cards */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px; margin-bottom: 16px;
     }
+    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .card-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
 
-    ::-webkit-scrollbar {
-      width: 8px;
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .tab {
+      flex: 1; padding: 10px 8px; border-radius: 8px;
+      border: 2px solid var(--border); background: var(--surface2);
+      color: var(--muted); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all .18s; text-align: center;
+      font-family: 'Inter', sans-serif;
     }
+    .tab:hover { border-color: var(--accent); color: var(--text); }
+    .tab.active { border-color: var(--accent); background: #2a2d45; color: var(--text); }
 
-    ::-webkit-scrollbar-track {
-      background: transparent;
+    /* Inputs */
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    input[type="text"], input[type="password"], input[type="number"], textarea {
+      width: 100%; background: var(--surface2); border: 1.5px solid var(--border);
+      border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif;
+      font-size: 14px; padding: 11px 14px; transition: border-color .18s;
+      outline: none;
     }
+    input:focus, textarea:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 180px; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
+    .hint a { color: var(--accent); text-decoration: none; }
+    .hint a:hover { text-decoration: underline; }
+    .field { margin-bottom: 16px; }
 
-    ::-webkit-scrollbar-thumb {
-      background: #d1d5db;
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: #9ca3af;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .animate-in {
-      animation: fadeIn 0.4s ease-out;
-    }
-
-    input[type="file"]::file-selector-button {
-      background: #0f172a;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 500;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-
-    input[type="file"]::file-selector-button:hover {
-      background: #1e293b;
-    }
-
-    input[type="checkbox"] {
-      accent-color: #0f172a;
-      cursor: pointer;
-      width: 18px;
-      height: 18px;
-    }
-
-    .status-success {
-      background: #f0fdf4;
-      border: 1px solid #dcfce7;
-      color: #166534;
-    }
-
-    .status-error {
-      background: #fef2f2;
-      border: 1px solid #fee2e2;
-      color: #991b1b;
-    }
-
-    .status-info {
-      background: #f0f9ff;
-      border: 1px solid #e0f2fe;
-      color: #0c2d6b;
-    }
-
-    #debugLog {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      color: #334155;
-    }
-
-    .debug-entry {
-      color: #64748b;
-      padding: 4px 0;
-      font-size: 12px;
-    }
-
-    .debug-entry.info {
-      color: #0c4a6e;
-    }
-
-    .debug-entry.success {
-      color: #166534;
-    }
-
-    .debug-entry.error {
-      color: #991b1b;
-    }
-
-    .debug-entry.warning {
-      color: #92400e;
-    }
-
-    .file-card {
-      transition: all 0.2s ease-out;
-    }
-
-    .file-card:hover {
-      transform: translateY(-2px);
-      border-color: #cbd5e1;
-    }
-
+    /* Upload area */
     .upload-area {
-      border: 2px dashed #cbd5e1;
-      background: #f8fafc;
-      transition: all 0.2s;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
+      border: 2px dashed var(--border); border-radius: 10px;
+      padding: 32px; text-align: center; cursor: pointer;
+      transition: all .18s; background: var(--surface2);
+    }
+    .upload-area:hover, .upload-area.drag { border-color: var(--accent); background: #22263a; }
+    .upload-icon { font-size: 32px; margin-bottom: 8px; }
+    .upload-text { font-size: 14px; color: var(--muted); }
+    .upload-area input[type="file"] { display: none; }
+    .file-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .chip {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 5px 10px;
+      font-size: 12px; font-weight: 500; color: var(--muted);
     }
 
-    .upload-area:hover {
-      border-color: #0f172a;
-      background: #f1f5f9;
+    /* CSV preview */
+    .csv-preview {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; margin-top: 12px;
+      font-size: 13px; color: var(--muted); display: none;
     }
+    .csv-preview.visible { display: block; }
+    .csv-preview strong { color: var(--green); }
 
-    .upload-area.drag-over {
-      border-color: #0f172a;
-      background: #f1f5f9;
+    /* Questions count */
+    .count-row { display: flex; align-items: center; gap: 12px; }
+    .count-row input { max-width: 90px; }
+    .count-row span { font-size: 13px; color: var(--muted); }
+
+    /* Generate button */
+    .btn-generate {
+      width: 100%; padding: 15px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, var(--accent), #9333ea);
+      color: #fff; font-size: 16px; font-weight: 700;
+      cursor: pointer; transition: all .2s; font-family: 'Inter', sans-serif;
+      letter-spacing: -.01em;
     }
+    .btn-generate:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(108,99,255,.3); }
+    .btn-generate:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    .upload-area input[type="file"] {
-      width: auto;
+    /* Status */
+    .status { padding: 16px; border-radius: 10px; font-size: 14px; min-height: 54px; }
+    .status.idle { background: var(--surface2); color: var(--muted); }
+    .status.loading { background: #1e2040; border: 1px solid var(--accent); color: var(--accent); }
+    .status.success { background: #052e16; border: 1px solid #16a34a; color: #86efac; }
+    .status.error { background: #1e0606; border: 1px solid var(--red); color: #fca5a5; }
+
+    /* Result */
+    .result-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px; margin-top: 12px;
+      display: none; animation: fadeUp .3s ease;
+    }
+    .result-card.visible { display: block; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .result-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .result-meta { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .btn-start {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 13px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: all .2s; text-decoration: none;
+      font-family: 'Inter', sans-serif;
+    }
+    .btn-start:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-share {
+      width: 100%; padding: 11px; border-radius: 10px;
+      border: 1.5px solid var(--border); background: transparent;
+      color: var(--muted); font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all .18s; margin-top: 8px;
+      font-family: 'Inter', sans-serif;
+    }
+    .btn-share:hover { border-color: var(--accent); color: var(--text); }
+
+    /* Debug */
+    .debug-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .debug-toggle input { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
+    .debug-toggle span { font-size: 13px; color: var(--muted); font-weight: 500; }
+    #debugLog {
+      background: #0a0c14; border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; height: 220px;
+      overflow-y: auto; font-family: monospace; font-size: 12px;
+      margin-top: 12px; display: none;
+    }
+    .log-info { color: #60a5fa; }
+    .log-success { color: var(--green); }
+    .log-error { color: var(--red); }
+    .log-warn { color: #f59e0b; }
+
+    @media (max-width: 520px) {
+      .card { padding: 18px; }
+      .tabs { gap: 6px; }
+      .tab { font-size: 12px; padding: 9px 6px; }
     }
   </style>
 </head>
-<body class="p-4 md:p-8">
-  <div class="max-w-4xl mx-auto">
-    <!-- Header -->
-    <div class="mb-12 animate-in">
-      <div class="flex items-start gap-4 mb-2">
-        <div class="text-4xl">📚</div>
-        <div>
-          <h1 class="text-4xl font-bold text-slate-900 mb-1">Quiz Automation</h1>
-          <p class="text-slate-600 text-sm">Convert book pages to interactive quizzes with AI</p>
-        </div>
-      </div>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-row">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">Quiz<span>Craft</span></div>
     </div>
+    <div class="tagline">Convert notes, images, or CSV into interactive quizzes instantly</div>
+  </div>
 
-    <!-- Settings Section -->
-    <div class="bg-white border border-slate-200 rounded-lg p-8 mb-6 animate-in">
-      <div class="mb-6">
-        <h2 class="text-xl font-semibold text-slate-900 mb-1">⚙️ Settings</h2>
-        <p class="text-sm text-slate-600">Configure your Google Form Script URL</p>
-      </div>
-      
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-slate-900 mb-2">Groq API Key</label>
-        <input type="password" id="geminiApiKey" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm font-mono" placeholder="gsk_...">
-        <p class="text-xs text-slate-500 mt-2">💡 Get a free key at <a href="https://console.groq.com/keys" target="_blank" class="underline">console.groq.com/keys</a> — saved locally in your browser</p>
-      </div>
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-slate-900 mb-2">Google Apps Script URL</label>
-        <input type="text" id="scriptUrl" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm font-mono" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec">
-        <p class="text-xs text-slate-500 mt-2">💡 This is the deployment URL from your Google Apps Script</p>
-      </div>
-    </div>
-
-    <!-- Input Method Selection -->
-    <div class="bg-white border border-slate-200 rounded-lg p-8 mb-6 animate-in">
-      <div class="mb-6">
-        <h2 class="text-xl font-semibold text-slate-900 mb-1">Step 1: Choose Input Method</h2>
-        <p class="text-sm text-slate-600">Select how you want to provide quiz content</p>
-      </div>
-      
-      <div class="flex gap-4 mb-6">
-        <button id="uploadModeBtn" class="flex-1 bg-slate-900 text-white px-4 py-3 rounded-lg font-medium text-sm transition-colors">
-          📷 Upload Images
-        </button>
-        <button id="textModeBtn" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-900 px-4 py-3 rounded-lg font-medium text-sm transition-colors">
-          📝 Paste Questions
-        </button>
-      </div>
-
-      <!-- Upload Mode -->
-      <div id="uploadMode">
-        <div class="mb-6">
-          <div class="upload-area rounded-lg p-8">
-            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" multiple>
-            <p class="text-slate-500 text-xs">JPG, PNG, PDF • Max 1MB per file</p>
-          </div>
-        </div>
-        <div id="filePreview" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
-      </div>
-
-      <!-- Text Mode -->
-      <div id="textMode" style="display: none;">
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-slate-900 mb-2">Paste your questions here</label>
-          <textarea id="questionsInput" class="w-full h-64 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm resize-none" placeholder="Paste your questions in any format..."></textarea>
-          <p id="textPreview" class="text-xs text-slate-500 mt-2">0 characters, 0 lines</p>
-        </div>
-      </div>
-
-      <!-- Number of Questions (shared) -->
-      <div class="mt-4">
-        <label class="block text-sm font-medium text-slate-900 mb-2">Number of Questions</label>
-        <input type="number" id="questionCount" value="30" min="5" max="50" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm">
-      </div>
-    </div>
-
-    <!-- Actions Section -->
-    <div class="bg-white border border-slate-200 rounded-lg p-8 mb-6 animate-in">
-      <div class="mb-6">
-        <h2 class="text-xl font-semibold text-slate-900 mb-1">Step 2: Generate Quiz</h2>
-        <p class="text-sm text-slate-600">Choose an action to process your images</p>
-      </div>
-      <button id="uploadBtn" class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-lg font-medium text-sm transition-colors">
-        Generate Quiz
-      </button>
-    </div>
-
-    <!-- Status Section -->
-    <div class="bg-white border border-slate-200 rounded-lg p-8 mb-6 animate-in">
-      <h2 class="text-xl font-semibold text-slate-900 mb-4">Status</h2>
-      <div id="status" class="text-slate-700 min-h-12 text-sm"></div>
-    </div>
-
-    <!-- Debug Toggle -->
-    <div class="bg-white border border-slate-200 rounded-lg p-6 mb-6 animate-in">
-      <label class="flex items-center gap-3 cursor-pointer">
-        <input type="checkbox" id="debugMode">
-        <span class="text-slate-900 font-medium text-sm">🐛 Debug Mode</span>
-      </label>
-    </div>
-    
-    <!-- Debug Console -->
-    <div id="debugContainer" class="bg-white border border-slate-200 rounded-lg p-8 animate-in" style="display: none;">
-      <h2 class="text-xl font-semibold text-slate-900 mb-4">Debug Console</h2>
-      <div id="debugLog" class="rounded-lg p-4 h-80 overflow-y-auto font-mono text-xs border border-slate-200 mb-4"></div>
-      <button id="clearLog" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
-        Clear Log
-      </button>
+  <!-- Settings -->
+  <div class="card">
+    <div class="card-title">⚙️ Settings</div>
+    <div class="card-sub">Configure your AI API key</div>
+    <div class="field">
+      <label>Groq API Key</label>
+      <input type="password" id="apiKey" placeholder="gsk_...">
+      <div class="hint">Free at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> — saved in your browser</div>
     </div>
   </div>
 
-  <script>
-    const debugLog = document.getElementById("debugLog");
-    const debugMode = document.getElementById("debugMode");
-    const debugContainer = document.getElementById("debugContainer");
-    const uploadModeBtn = document.getElementById("uploadModeBtn");
-    const textModeBtn = document.getElementById("textModeBtn");
-    const uploadMode = document.getElementById("uploadMode");
-    const textMode = document.getElementById("textMode");
-    const questionsInput = document.getElementById("questionsInput");
-    const textPreview = document.getElementById("textPreview");
-    const geminiApiKeyInput = document.getElementById("geminiApiKey");
-    let currentMode = "upload";
+  <!-- Input -->
+  <div class="card">
+    <div class="card-title">Step 1 — Choose Input</div>
+    <div class="card-sub">How do you want to provide the quiz content?</div>
 
-    // Load saved settings from localStorage
-    geminiApiKeyInput.value = localStorage.getItem("geminiApiKey") || "";
-    document.getElementById("scriptUrl").value = localStorage.getItem("scriptUrl") || "";
-    geminiApiKeyInput.addEventListener("input", () => localStorage.setItem("geminiApiKey", geminiApiKeyInput.value.trim()));
-    document.getElementById("scriptUrl").addEventListener("input", (e) => localStorage.setItem("scriptUrl", e.target.value.trim()));
+    <div class="tabs">
+      <button class="tab active" id="tabText" onclick="switchTab('text')">📝 Paste Text</button>
+      <button class="tab" id="tabImg" onclick="switchTab('img')">📷 Upload Images</button>
+      <button class="tab" id="tabCsv" onclick="switchTab('csv')">📊 Upload CSV</button>
+    </div>
 
-    function getApiHeaders(extra = {}) {
-      const key = geminiApiKeyInput.value.trim();
-      return { "Content-Type": "application/json", ...(key ? { "X-Gemini-Key": key } : {}), ...extra };
-    }
+    <!-- Text -->
+    <div id="paneText">
+      <div class="field">
+        <label>Study material or questions</label>
+        <textarea id="textInput" placeholder="Paste your notes, lecture text, or pre-written questions in any format..."></textarea>
+        <div class="hint" id="textCount">0 characters</div>
+      </div>
+    </div>
 
-    function getFormHeaders() {
-      const key = geminiApiKeyInput.value.trim();
-      return key ? { "X-Gemini-Key": key } : {};
-    }
+    <!-- Images -->
+    <div id="paneImg" style="display:none">
+      <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp" multiple>
+        <div class="upload-icon">🖼️</div>
+        <div class="upload-text">Click to select images — or drag & drop<br><small>JPG, PNG, WEBP</small></div>
+      </div>
+      <div class="file-chips" id="fileChips"></div>
+    </div>
 
-    function log(message, type = "info") {
-      const timestamp = new Date().toLocaleTimeString();
-      const colors = { info: "debug-entry info", success: "debug-entry success", error: "debug-entry error", warning: "debug-entry warning" };
-      const logEntry = document.createElement("div");
-      logEntry.className = colors[type];
-      logEntry.textContent = `[${timestamp}] ${message}`;
-      debugLog.appendChild(logEntry);
-      debugLog.scrollTop = debugLog.scrollHeight;
-    }
+    <!-- CSV -->
+    <div id="paneCsv" style="display:none">
+      <div class="upload-area" id="csvZone" onclick="document.getElementById('csvInput').click()">
+        <input type="file" id="csvInput" accept=".csv">
+        <div class="upload-icon">📊</div>
+        <div class="upload-text">Click to upload a CSV file<br>
+          <small>Columns: question, option_a, option_b, option_c, option_d, correct_answer, explanation (optional)</small>
+        </div>
+      </div>
+      <div class="csv-preview" id="csvPreview"></div>
+    </div>
 
-    uploadModeBtn.addEventListener("click", () => {
-      currentMode = "upload";
-      uploadModeBtn.className = "flex-1 bg-slate-900 text-white px-4 py-3 rounded-lg font-medium text-sm transition-colors";
-      textModeBtn.className = "flex-1 bg-slate-200 hover:bg-slate-300 text-slate-900 px-4 py-3 rounded-lg font-medium text-sm transition-colors";
-      uploadMode.style.display = "block"; textMode.style.display = "none";
-      log("Switched to upload mode");
-    });
+    <!-- Question count (hidden for CSV) -->
+    <div class="field" id="countField" style="margin-top:16px;">
+      <label>Number of Questions</label>
+      <div class="count-row">
+        <input type="number" id="qCount" value="15" min="3" max="50">
+        <span>questions (AI modes only)</span>
+      </div>
+    </div>
+  </div>
 
-    textModeBtn.addEventListener("click", () => {
-      currentMode = "text";
-      textModeBtn.className = "flex-1 bg-slate-900 text-white px-4 py-3 rounded-lg font-medium text-sm transition-colors";
-      uploadModeBtn.className = "flex-1 bg-slate-200 hover:bg-slate-300 text-slate-900 px-4 py-3 rounded-lg font-medium text-sm transition-colors";
-      uploadMode.style.display = "none"; textMode.style.display = "block";
-      log("Switched to text mode");
-    });
+  <!-- Generate -->
+  <div class="card">
+    <div class="card-title">Step 2 — Generate</div>
+    <div class="card-sub">Click to create your quiz</div>
+    <button class="btn-generate" id="genBtn" onclick="generate()">⚡ Generate Quiz</button>
 
-    questionsInput.addEventListener("input", (e) => {
-      const text = e.target.value;
-      textPreview.textContent = `${text.length} characters, ${text.split("\n").length} lines`;
-    });
+    <div style="margin-top:16px;">
+      <div class="status idle" id="status">Ready — fill in your content above and click Generate.</div>
+    </div>
 
-    debugMode.addEventListener("change", (e) => { debugContainer.style.display = e.target.checked ? "block" : "none"; });
-    document.getElementById("clearLog").addEventListener("click", () => { debugLog.innerHTML = ""; });
+    <div class="result-card" id="resultCard">
+      <div class="result-title" id="resultTitle">Quiz Ready</div>
+      <div class="result-meta" id="resultMeta"></div>
+      <a id="startBtn" href="#" target="_blank" class="btn-start">🚀 Start Quiz</a>
+      <button class="btn-share" onclick="shareQuiz()">🔗 Copy Share Link</button>
+    </div>
+  </div>
 
-    document.getElementById("fileInput").addEventListener("change", (e) => {
-      const files = e.target.files;
-      const preview = document.getElementById("filePreview");
-      preview.innerHTML = "";
-      log(`${files.length} file(s) selected`);
-      Array.from(files).forEach((file) => {
-        const div = document.createElement("div");
-        div.className = "file-card bg-slate-50 border border-slate-200 rounded-lg p-4 animate-in";
-        div.innerHTML = `<p class="font-medium text-slate-900 text-sm truncate">${file.name}</p><p class="text-xs text-slate-500 mt-1">${(file.size / 1024).toFixed(1)} KB</p>`;
-        preview.appendChild(div);
-      });
-    });
+  <!-- Debug -->
+  <div class="card">
+    <label class="debug-toggle">
+      <input type="checkbox" id="debugToggle" onchange="toggleDebug(this.checked)">
+      <span>🐛 Debug Console</span>
+    </label>
+    <div id="debugLog"></div>
+  </div>
 
-    async function compressImage(file) {
-      log(`Compressing ${file.name}...`);
-      const img = await createImageBitmap(file);
-      const canvas = document.createElement("canvas");
-      const scale = Math.min(1, 1000 / img.width);
-      canvas.width = img.width * scale; canvas.height = img.height * scale;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.7));
-      return new File([blob], file.name, { type: "image/jpeg" });
-    }
+</div>
 
-    document.getElementById("uploadBtn").addEventListener("click", async () => {
-      const status = document.getElementById("status");
-      const questionCount = document.getElementById("questionCount").value || 30;
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let tab = 'text';
+let csvQuestions = null;
+let quizUrl = '';
 
-      if (!geminiApiKeyInput.value.trim() && !"env") {
-        status.innerHTML = `<div class="status-error p-4 rounded-lg text-sm">⚠️ Please enter your Gemini API Key in Settings first.</div>`;
-        return;
+// ── Persist API key ────────────────────────────────────────────────────────
+const apiKeyEl = document.getElementById('apiKey');
+apiKeyEl.value = localStorage.getItem('groqKey') || '';
+apiKeyEl.addEventListener('input', () => localStorage.setItem('groqKey', apiKeyEl.value.trim()));
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(t) {
+  tab = t;
+  ['text','img','csv'].forEach(x => {
+    document.getElementById('tab' + x.charAt(0).toUpperCase() + x.slice(1)).classList.toggle('active', x === t);
+    document.getElementById('pane' + x.charAt(0).toUpperCase() + x.slice(1)).style.display = x === t ? '' : 'none';
+  });
+  document.getElementById('countField').style.display = t === 'csv' ? 'none' : '';
+  csvQuestions = null;
+  document.getElementById('csvPreview').classList.remove('visible');
+}
+
+// ── Text counter ───────────────────────────────────────────────────────────
+document.getElementById('textInput').addEventListener('input', e => {
+  document.getElementById('textCount').textContent = `${e.target.value.length} characters`;
+});
+
+// ── Image handling ─────────────────────────────────────────────────────────
+const fileInput = document.getElementById('fileInput');
+const dropZone  = document.getElementById('dropZone');
+
+fileInput.addEventListener('change', updateChips);
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  fileInput.files = e.dataTransfer.files; updateChips();
+});
+
+function updateChips() {
+  const chips = document.getElementById('fileChips');
+  chips.innerHTML = Array.from(fileInput.files)
+    .map(f => `<div class="chip">📄 ${f.name} (${(f.size/1024).toFixed(0)}KB)</div>`).join('');
+}
+
+// ── CSV parsing ────────────────────────────────────────────────────────────
+document.getElementById('csvInput').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  Papa.parse(file, {
+    header: true, skipEmptyLines: true,
+    complete(res) {
+      const rows = res.data;
+      const preview = document.getElementById('csvPreview');
+      if (!rows.length) { preview.innerHTML = '❌ Empty CSV'; preview.classList.add('visible'); return; }
+
+      // Flexible column detection
+      const cols = Object.keys(rows[0]).map(c => c.toLowerCase().trim());
+      const qCol   = findCol(cols, ['question','q','question text']);
+      const aCol   = findCol(cols, ['option_a','a','option a','answer_a','choice_a']);
+      const bCol   = findCol(cols, ['option_b','b','option b','answer_b','choice_b']);
+      const cCol   = findCol(cols, ['option_c','c','option c','answer_c','choice_c']);
+      const dCol   = findCol(cols, ['option_d','d','option d','answer_d','choice_d']);
+      const ansCol = findCol(cols, ['correct_answer','answer','correct','ans']);
+      const expCol = findCol(cols, ['explanation','explain','reason']);
+
+      if (!qCol || !ansCol) {
+        preview.innerHTML = '❌ Could not detect required columns (question, correct_answer). Check your CSV headers.';
+        preview.classList.add('visible'); return;
       }
 
-      try {
-        log("=== QUIZ GENERATION STARTED ===");
-        let fullText = "";
+      const originalCols = Object.keys(rows[0]);
+      const get = (row, lcol) => {
+        const orig = originalCols.find(c => c.toLowerCase().trim() === lcol);
+        return orig ? (row[orig] || '').trim() : '';
+      };
 
-        if (currentMode === "upload") {
-          const files = document.getElementById("fileInput").files;
-          if (!files.length) return alert("Select images first!");
-          for (const f of Array.from(files)) {
-            status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">🔍 Extracting text from ${f.name}...</div>`;
-            log(`Processing image: ${f.name}`);
-            const smallFile = await compressImage(f);
-            const formData = new FormData();
-            formData.append("file", smallFile);
-            const ocrRes = await fetch("/ocr", { method: "POST", headers: getFormHeaders(), body: formData });
-            if (!ocrRes.ok) throw new Error(`OCR failed: ${await ocrRes.text()}`);
-            const ocrData = await ocrRes.json();
-            if (ocrData.error) throw new Error(ocrData.error);
-            fullText += (ocrData.text || "") + "\n\n";
-            log(`Extracted ${ocrData.text?.length || 0} characters from ${f.name}`, "success");
-          }
+      csvQuestions = rows.map((row, i) => {
+        const options = [
+          aCol ? `A) ${get(row, aCol)}` : null,
+          bCol ? `B) ${get(row, bCol)}` : null,
+          cCol ? `C) ${get(row, cCol)}` : null,
+          dCol ? `D) ${get(row, dCol)}` : null
+        ].filter(Boolean);
+
+        // Normalize correct answer
+        let ans = get(row, ansCol);
+        if (/^[abcd]$/i.test(ans)) {
+          const map = {a:0,b:1,c:2,d:3};
+          ans = options[map[ans.toLowerCase()]] || ans;
+        } else if (/^[1-4]$/.test(ans)) {
+          ans = options[parseInt(ans)-1] || ans;
         } else {
-          fullText = questionsInput.value.trim();
-          if (!fullText) return alert("Paste some questions or study material first!");
-          log(`Text mode: ${fullText.length} characters`);
+          const letter = ans.match(/^[A-D]/i)?.[0]?.toUpperCase();
+          if (letter) ans = options[['A','B','C','D'].indexOf(letter)] || ans;
         }
 
-        log("Sending to Gemini for quiz generation...");
-        status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">🤖 Generating quiz with Gemini...</div>`;
+        return {
+          question: get(row, qCol),
+          options,
+          correctAnswer: ans,
+          explanation: expCol ? get(row, expCol) : '',
+          difficulty: 'easy'
+        };
+      }).filter(q => q.question && q.options.length >= 2);
 
-        const quizRes = await fetch("/quiz", {
-          method: "POST",
-          headers: getApiHeaders(),
-          body: JSON.stringify({ text: fullText, questionCount, mode: currentMode })
-        });
+      preview.innerHTML = `<strong>✅ ${csvQuestions.length} questions loaded</strong> from ${file.name}. Ready to start!`;
+      preview.classList.add('visible');
+      log(`CSV loaded: ${csvQuestions.length} questions`, 'success');
+    }
+  });
+});
 
-        const quizResText = await quizRes.text();
-        log(`Quiz API response: status ${quizRes.status}`);
-        log(`Quiz response: ${quizResText.substring(0, 200)}...`);
+function findCol(cols, names) {
+  return names.find(n => cols.includes(n)) || null;
+}
 
-        if (!quizRes.ok) throw new Error(`Quiz generation failed: ${quizResText}`);
-        const quiz = JSON.parse(quizResText);
-        if (quiz.error) throw new Error(quiz.error);
-        log(`Quiz generated with ${quiz.questions?.length || 0} questions`, "success");
+// ── Generate ───────────────────────────────────────────────────────────────
+async function generate() {
+  const apiKey = apiKeyEl.value.trim();
+  const btn    = document.getElementById('genBtn');
+  const status = document.getElementById('status');
 
-        log("Creating Google Form...");
-        status.innerHTML = `<div class="status-info p-4 rounded-lg text-sm">📝 Creating Google Form...</div>`;
+  setStatus('loading', '⚡ Starting...');
+  btn.disabled = true;
+  document.getElementById('resultCard').classList.remove('visible');
 
-        const formRes = await fetch("/form", {
-          method: "POST",
-          headers: getApiHeaders(),
-          body: JSON.stringify(quiz)
-        });
-        const formData = await formRes.json();
-        if (formData.error) throw new Error(formData.error);
-        log(`Form created: ${formData.formUrl}`, "success");
+  try {
+    log('=== QUIZ GENERATION STARTED ===');
+    let quiz;
 
-        status.innerHTML = `
-          <div class="space-y-4">
-            <div class="status-success p-4 rounded-lg">
-              <p class="font-semibold text-sm">✅ Quiz Generated Successfully!</p>
-            </div>
-            <a href="${formData.formUrl}" target="_blank" class="flex items-center justify-center gap-2 bg-[#673AB7] hover:bg-[#5e35b1] text-white px-4 py-3 rounded-lg font-medium text-sm shadow-sm">
-              Open Google Form
-            </a>
-            <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
-              <p class="text-xs font-semibold text-slate-700 mb-2">Quiz Details</p>
-              <p class="text-xs text-slate-600">Title: ${quiz.title || "Quiz"}</p>
-              <p class="text-xs text-slate-600">Questions: ${quiz.questions?.length || 0}</p>
-            </div>
-          </div>`;
-        log("=== QUIZ GENERATION COMPLETED ===", "success");
-      } catch (err) {
-        log(err.message, "error");
-        status.innerHTML = `<div class="status-error p-4 rounded-lg text-sm">❌ Error: ${err.message}</div>`;
+    if (tab === 'csv') {
+      // ── CSV path ───────────────────────────────────────────────
+      if (!csvQuestions || !csvQuestions.length) throw new Error('No CSV loaded. Upload a CSV file first.');
+      quiz = { title: 'CSV Quiz', questions: csvQuestions };
+      log(`CSV mode: ${csvQuestions.length} questions`, 'success');
+
+    } else if (tab === 'text') {
+      // ── Text path ──────────────────────────────────────────────
+      if (!apiKey) throw new Error('Groq API key required. Add it in Settings above.');
+      const text = document.getElementById('textInput').value.trim();
+      if (!text) throw new Error('Paste some text or study material first.');
+      const qCount = document.getElementById('qCount').value || 15;
+      log(`Text mode: ${text.length} characters, requesting ${qCount} questions`);
+      setStatus('loading', '🤖 Generating questions with AI...');
+      quiz = await callQuizAPI(text, qCount, apiKey);
+
+    } else {
+      // ── Image path ─────────────────────────────────────────────
+      if (!apiKey) throw new Error('Groq API key required. Add it in Settings above.');
+      const files = fileInput.files;
+      if (!files.length) throw new Error('Select at least one image.');
+      const qCount = document.getElementById('qCount').value || 15;
+      let fullText = '';
+
+      for (const f of Array.from(files)) {
+        setStatus('loading', `🔍 Reading ${f.name}...`);
+        log(`OCR: ${f.name}`);
+        const compressed = await compressImage(f);
+        const fd = new FormData(); fd.append('file', compressed);
+        const r = await fetch('/ocr', { method: 'POST', headers: { 'X-Gemini-Key': apiKey }, body: fd });
+        const d = await r.json();
+        if (d.error) throw new Error(`OCR failed: ${d.error}`);
+        fullText += (d.text || '') + '\n\n';
+        log(`Extracted ${d.text?.length || 0} chars from ${f.name}`, 'success');
       }
-    });
-    log("Quiz Automation Tool initialized", "success");
-  </script>
-</body></html>
+
+      setStatus('loading', '🤖 Generating questions with AI...');
+      quiz = await callQuizAPI(fullText, qCount, apiKey);
+    }
+
+    // ── Encode and build URL ────────────────────────────────────
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(quiz))));
+    quizUrl = `${location.origin}/play?q=${encoded}`;
+
+    // Show result
+    document.getElementById('resultTitle').textContent = quiz.title || 'Your Quiz';
+    document.getElementById('resultMeta').textContent = `${quiz.questions.length} questions · Ready to play`;
+    document.getElementById('startBtn').href = quizUrl;
+    document.getElementById('resultCard').classList.add('visible');
+    setStatus('success', `✅ Quiz generated with ${quiz.questions.length} questions!`);
+    log(`Quiz ready: ${quiz.questions.length} questions`, 'success');
+    log('=== DONE ===', 'success');
+
+  } catch (err) {
+    setStatus('error', `❌ ${err.message}`);
+    log(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function callQuizAPI(text, qCount, apiKey) {
+  const r = await fetch('/quiz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Gemini-Key': apiKey },
+    body: JSON.stringify({ text, questionCount: qCount })
+  });
+  const raw = await r.text();
+  log(`Quiz API: ${r.status}`);
+  if (!r.ok) throw new Error(`API error: ${raw}`);
+  const d = JSON.parse(raw);
+  if (d.error) throw new Error(d.error);
+  log(`Generated ${d.questions?.length} questions`, 'success');
+  return d;
+}
+
+async function compressImage(file) {
+  const img = await createImageBitmap(file);
+  const canvas = document.createElement('canvas');
+  const scale  = Math.min(1, 1000 / img.width);
+  canvas.width  = img.width  * scale;
+  canvas.height = img.height * scale;
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.75));
+  return new File([blob], file.name, { type: 'image/jpeg' });
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function setStatus(type, msg) {
+  const el = document.getElementById('status');
+  el.className = `status ${type}`;
+  el.textContent = msg;
+}
+
+function shareQuiz() {
+  if (!quizUrl) return;
+  navigator.clipboard.writeText(quizUrl).then(() => alert('Quiz link copied to clipboard!'));
+}
+
+function log(msg, type = 'info') {
+  const el = document.getElementById('debugLog');
+  const ts = new Date().toLocaleTimeString();
+  const div = document.createElement('div');
+  div.className = `log-${type}`;
+  div.textContent = `[${ts}] ${msg}`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function toggleDebug(on) {
+  document.getElementById('debugLog').style.display = on ? 'block' : 'none';
+}
+
+log('QuizCraft initialized', 'success');
+</script>
+</body>
+</html>

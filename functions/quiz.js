@@ -18,7 +18,7 @@ export async function onRequest({ request, env }) {
 
   const prompt = `You are a quiz generator. Based on the study material below, generate exactly ${questionCount} multiple choice questions (${easyCount} easy, ${hardCount} hard).
 
-Return ONLY a valid JSON object in this exact format — no markdown, no code blocks, no explanation:
+Return ONLY a valid JSON object — no markdown, no code blocks, no explanation:
 {
   "title": "A descriptive quiz title based on the topic",
   "questions": [
@@ -26,6 +26,7 @@ Return ONLY a valid JSON object in this exact format — no markdown, no code bl
       "question": "The question text here?",
       "options": ["A) First option", "B) Second option", "C) Third option", "D) Fourth option"],
       "correctAnswer": "A) First option",
+      "explanation": "Brief explanation of why this answer is correct.",
       "difficulty": "easy"
     }
   ]
@@ -35,6 +36,7 @@ Rules:
 - Generate exactly ${questionCount} questions total
 - Each question must have exactly 4 options prefixed with A) B) C) D)
 - correctAnswer must exactly match one of the options (including the A) B) C) D) prefix)
+- explanation should be 1-2 sentences explaining the correct answer
 - difficulty must be "easy" or "hard"
 - Questions should cover the main concepts in the material
 
