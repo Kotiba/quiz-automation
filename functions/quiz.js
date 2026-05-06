@@ -7,7 +7,7 @@ export async function onRequest({ request, env }) {
     return new Response(JSON.stringify({ error: "GROQ_API_KEY not configured" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
-  const { text, questionCount = 30, mode } = await request.json();
+  const { text, questionCount = 30, mode, prewritten = false } = await request.json();
 
   if (!text || !text.trim()) {
     return new Response(JSON.stringify({ error: "No text provided" }), { status: 400, headers: { "Content-Type": "application/json" } });
@@ -16,9 +16,35 @@ export async function onRequest({ request, env }) {
   const easyCount = Math.round(questionCount * 0.7);
   const hardCount = questionCount - easyCount;
 
-  const prompt = `You are a quiz generator. Based on the study material below, generate exactly ${questionCount} multiple choice questions (${easyCount} easy, ${hardCount} hard).
+  const prompt = prewritten
+    ? `You are a quiz formatter. The text below contains pre-written quiz questions. Extract ALL of them and return as JSON.
 
-Return ONLY a valid JSON object — no markdown, no code blocks, no explanation:
+Return ONLY a valid JSON object — no markdown, no code blocks:
+{
+  "title": "A descriptive quiz title based on the topic",
+  "questions": [
+    {
+      "question": "The question text?",
+      "options": ["A) Option1", "B) Option2", "C) Option3", "D) Option4"],
+      "correctAnswer": "A) Option1",
+      "explanation": "Brief explanation of the correct answer.",
+      "difficulty": "easy"
+    }
+  ]
+}
+
+Rules:
+- Extract every question exactly as written, do not invent new ones
+- Each question must have exactly 4 options prefixed A) B) C) D)
+- correctAnswer must match one of the options exactly
+- Add a short explanation for each correct answer
+- difficulty must be "easy" or "hard"
+
+Questions to format:
+${text}`
+    : `You are a quiz generator. Based on the study material below, generate exactly ${questionCount} multiple choice questions (${easyCount} easy, ${hardCount} hard).
+
+Return ONLY a valid JSON object — no markdown, no code blocks:
 {
   "title": "A descriptive quiz title based on the topic",
   "questions": [
@@ -38,10 +64,12 @@ Rules:
 - correctAnswer must exactly match one of the options (including the A) B) C) D) prefix)
 - explanation should be 1-2 sentences explaining the correct answer
 - difficulty must be "easy" or "hard"
-- Questions should cover the main concepts in the material
 
 Study material:
 ${text}`;
+
+
+
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",

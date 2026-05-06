@@ -4,517 +4,389 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuizCraft — AI Quiz Generator</title>
-  <meta name="description" content="Convert notes, images, or CSV into interactive quizzes instantly using AI.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
-      --border: #2e3250; --text: #e8eaf6; --muted: #8b91b3;
-      --accent: #6c63ff; --accent2: #4fd1c5;
-      --green: #22c55e; --red: #ef4444;
-      --radius: 14px;
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#f8f9fc;--white:#ffffff;--border:#e5e7eb;--text:#111827;
+      --muted:#6b7280;--accent:#6366f1;--accent-light:#eef2ff;
+      --green:#16a34a;--red:#dc2626;--radius:12px;
+      --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+      --shadow-md:0 4px 16px rgba(0,0,0,.08);
     }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg); color: var(--text);
-      min-height: 100vh; padding: 32px 16px 64px;
-    }
-    .wrap { max-width: 760px; margin: 0 auto; }
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0 0 80px}
 
-    /* Header */
-    .header { margin-bottom: 40px; }
-    .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
-    .logo-icon { font-size: 36px; }
-    .logo-text { font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
-    .logo-text span { color: var(--accent); }
-    .tagline { color: var(--muted); font-size: 14px; margin-left: 50px; }
+    /* Nav */
+    nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+    .nav-logo{font-size:18px;font-weight:800;letter-spacing:-.02em}
+    .nav-logo span{color:var(--accent)}
+    .nav-badge{background:var(--accent-light);color:var(--accent);font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
 
-    /* Cards */
-    .card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 28px; margin-bottom: 16px;
-    }
-    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-    .card-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+    /* Hero */
+    .hero{background:var(--white);border-bottom:1px solid var(--border);padding:56px 24px 48px;text-align:center}
+    .hero h1{font-size:clamp(28px,5vw,48px);font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-bottom:12px}
+    .hero h1 span{color:var(--accent)}
+    .hero p{font-size:16px;color:var(--muted);max-width:480px;margin:0 auto 28px}
+    .hero-badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+    .badge{background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--muted)}
+
+    /* Main */
+    .main{max-width:700px;margin:32px auto;padding:0 16px;display:flex;flex-direction:column;gap:16px}
+
+    /* Card */
+    .card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+    .card-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .step-num{width:28px;height:28px;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+    .card-title{font-size:15px;font-weight:700}
+    .card-sub{font-size:13px;color:var(--muted)}
 
     /* Tabs */
-    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
-    .tab {
-      flex: 1; padding: 10px 8px; border-radius: 8px;
-      border: 2px solid var(--border); background: var(--surface2);
-      color: var(--muted); font-size: 13px; font-weight: 600;
-      cursor: pointer; transition: all .18s; text-align: center;
-      font-family: 'Inter', sans-serif;
-    }
-    .tab:hover { border-color: var(--accent); color: var(--text); }
-    .tab.active { border-color: var(--accent); background: #2a2d45; color: var(--text); }
+    .tabs{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:4px;gap:4px;margin-bottom:20px}
+    .tab{flex:1;padding:8px;border-radius:6px;border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:.15s}
+    .tab:hover{color:var(--text)}
+    .tab.active{background:var(--white);color:var(--accent);box-shadow:var(--shadow)}
 
-    /* Inputs */
-    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
-    input[type="text"], input[type="password"], input[type="number"], textarea {
-      width: 100%; background: var(--surface2); border: 1.5px solid var(--border);
-      border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif;
-      font-size: 14px; padding: 11px 14px; transition: border-color .18s;
-      outline: none;
-    }
-    input:focus, textarea:focus { border-color: var(--accent); }
-    textarea { resize: vertical; min-height: 180px; }
-    .hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
-    .hint a { color: var(--accent); text-decoration: none; }
-    .hint a:hover { text-decoration: underline; }
-    .field { margin-bottom: 16px; }
+    /* Form elements */
+    label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px}
+    input[type=text],input[type=password],input[type=number],textarea{
+      width:100%;border:1.5px solid var(--border);border-radius:8px;
+      font-family:'Inter',sans-serif;font-size:14px;padding:10px 13px;
+      outline:none;transition:.15s;background:var(--white);color:var(--text)}
+    input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+    textarea{resize:vertical;min-height:160px;line-height:1.6}
+    .hint{font-size:12px;color:var(--muted);margin-top:4px}
+    .hint a{color:var(--accent);text-decoration:none}
+    .field{margin-bottom:14px}
 
-    /* Upload area */
-    .upload-area {
-      border: 2px dashed var(--border); border-radius: 10px;
-      padding: 32px; text-align: center; cursor: pointer;
-      transition: all .18s; background: var(--surface2);
-    }
-    .upload-area:hover, .upload-area.drag { border-color: var(--accent); background: #22263a; }
-    .upload-icon { font-size: 32px; margin-bottom: 8px; }
-    .upload-text { font-size: 14px; color: var(--muted); }
-    .upload-area input[type="file"] { display: none; }
-    .file-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-    .chip {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 6px; padding: 5px 10px;
-      font-size: 12px; font-weight: 500; color: var(--muted);
-    }
+    /* Upload */
+    .upload-area{border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:.15s;background:var(--bg)}
+    .upload-area:hover,.upload-area.drag{border-color:var(--accent);background:var(--accent-light)}
+    .upload-area input{display:none}
+    .upload-icon{font-size:28px;margin-bottom:6px}
+    .upload-text{font-size:14px;color:var(--muted)}
+    .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+    .chip{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:500;color:var(--muted)}
 
-    /* CSV preview */
-    .csv-preview {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 8px; padding: 14px; margin-top: 12px;
-      font-size: 13px; color: var(--muted); display: none;
-    }
-    .csv-preview.visible { display: block; }
-    .csv-preview strong { color: var(--green); }
+    .csv-info{background:var(--accent-light);border:1px solid #c7d2fe;border-radius:8px;padding:12px;font-size:13px;color:var(--accent);margin-top:10px;display:none}
+    .csv-info.show{display:block}
 
-    /* Questions count */
-    .count-row { display: flex; align-items: center; gap: 12px; }
-    .count-row input { max-width: 90px; }
-    .count-row span { font-size: 13px; color: var(--muted); }
-
-    /* Generate button */
-    .btn-generate {
-      width: 100%; padding: 15px; border-radius: 10px; border: none;
-      background: linear-gradient(135deg, var(--accent), #9333ea);
-      color: #fff; font-size: 16px; font-weight: 700;
-      cursor: pointer; transition: all .2s; font-family: 'Inter', sans-serif;
-      letter-spacing: -.01em;
-    }
-    .btn-generate:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(108,99,255,.3); }
-    .btn-generate:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+    /* Generate btn */
+    .btn-gen{width:100%;padding:14px;border-radius:10px;border:none;
+      background:var(--accent);color:#fff;font-size:16px;font-weight:700;
+      cursor:pointer;font-family:'Inter',sans-serif;transition:.18s;letter-spacing:-.01em}
+    .btn-gen:hover{background:#4f46e5;box-shadow:0 6px 20px rgba(99,102,241,.35);transform:translateY(-1px)}
+    .btn-gen:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
 
     /* Status */
-    .status { padding: 16px; border-radius: 10px; font-size: 14px; min-height: 54px; }
-    .status.idle { background: var(--surface2); color: var(--muted); }
-    .status.loading { background: #1e2040; border: 1px solid var(--accent); color: var(--accent); }
-    .status.success { background: #052e16; border: 1px solid #16a34a; color: #86efac; }
-    .status.error { background: #1e0606; border: 1px solid var(--red); color: #fca5a5; }
+    .status{padding:14px;border-radius:8px;font-size:14px;font-weight:500;margin-top:14px}
+    .s-idle{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+    .s-loading{background:#eef2ff;color:var(--accent);border:1px solid #c7d2fe}
+    .s-success{background:#f0fdf4;color:var(--green);border:1px solid #bbf7d0}
+    .s-error{background:#fef2f2;color:var(--red);border:1px solid #fecaca}
 
     /* Result */
-    .result-card {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 10px; padding: 20px; margin-top: 12px;
-      display: none; animation: fadeUp .3s ease;
-    }
-    .result-card.visible { display: block; }
-    @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-    .result-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-    .result-meta { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
-    .btn-start {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      width: 100%; padding: 13px; border-radius: 10px; border: none;
-      background: linear-gradient(135deg, #22c55e, #16a34a);
-      color: #fff; font-size: 15px; font-weight: 700;
-      cursor: pointer; transition: all .2s; text-decoration: none;
-      font-family: 'Inter', sans-serif;
-    }
-    .btn-start:hover { opacity: .9; transform: translateY(-1px); }
-    .btn-share {
-      width: 100%; padding: 11px; border-radius: 10px;
-      border: 1.5px solid var(--border); background: transparent;
-      color: var(--muted); font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: all .18s; margin-top: 8px;
-      font-family: 'Inter', sans-serif;
-    }
-    .btn-share:hover { border-color: var(--accent); color: var(--text); }
+    .result{background:var(--white);border:1.5px solid #bbf7d0;border-radius:var(--radius);padding:20px;margin-top:14px;display:none;animation:up .3s ease}
+    .result.show{display:block}
+    @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .result-title{font-size:16px;font-weight:700;margin-bottom:3px}
+    .result-meta{font-size:13px;color:var(--muted);margin-bottom:16px}
+    .btn-start{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:13px;border-radius:10px;border:none;background:var(--green);color:#fff;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;font-family:'Inter',sans-serif;transition:.18s;margin-bottom:8px}
+    .btn-start:hover{background:#15803d;transform:translateY(-1px)}
+    .btn-copy{width:100%;padding:11px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:.15s}
+    .btn-copy:hover{border-color:var(--accent);color:var(--accent)}
 
     /* Debug */
-    .debug-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-    .debug-toggle input { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
-    .debug-toggle span { font-size: 13px; color: var(--muted); font-weight: 500; }
-    #debugLog {
-      background: #0a0c14; border: 1px solid var(--border);
-      border-radius: 8px; padding: 14px; height: 220px;
-      overflow-y: auto; font-family: monospace; font-size: 12px;
-      margin-top: 12px; display: none;
-    }
-    .log-info { color: #60a5fa; }
-    .log-success { color: var(--green); }
-    .log-error { color: var(--red); }
-    .log-warn { color: #f59e0b; }
-
-    @media (max-width: 520px) {
-      .card { padding: 18px; }
-      .tabs { gap: 6px; }
-      .tab { font-size: 12px; padding: 9px 6px; }
-    }
+    .dbg-toggle{display:flex;align-items:center;gap:8px;cursor:pointer}
+    .dbg-toggle input{accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
+    .dbg-toggle span{font-size:13px;color:var(--muted);font-weight:500}
+    #log{background:#1e1e2e;border-radius:8px;padding:12px;height:200px;overflow-y:auto;font-family:monospace;font-size:12px;margin-top:12px;display:none}
+    .li{padding:2px 0}.li-i{color:#7dd3fc}.li-s{color:#86efac}.li-e{color:#fca5a5}
   </style>
 </head>
 <body>
-<div class="wrap">
 
-  <!-- Header -->
-  <div class="header">
-    <div class="logo-row">
-      <div class="logo-icon">⚡</div>
-      <div class="logo-text">Quiz<span>Craft</span></div>
-    </div>
-    <div class="tagline">Convert notes, images, or CSV into interactive quizzes instantly</div>
+<nav>
+  <div class="nav-logo">Quiz<span>Craft</span></div>
+  <div class="nav-badge">✨ AI Powered</div>
+</nav>
+
+<div class="hero">
+  <h1>Turn any content into<br>an <span>interactive quiz</span></h1>
+  <p>Paste notes, upload images, or import a CSV — QuizCraft generates a scored quiz in seconds.</p>
+  <div class="hero-badges">
+    <div class="badge">📝 Paste Text</div>
+    <div class="badge">📷 Upload Images</div>
+    <div class="badge">📊 CSV Import</div>
+    <div class="badge">⚡ Instant Results</div>
+    <div class="badge">🔗 Shareable Link</div>
   </div>
+</div>
+
+<div class="main">
 
   <!-- Settings -->
   <div class="card">
-    <div class="card-title">⚙️ Settings</div>
-    <div class="card-sub">Configure your AI API key</div>
+    <div class="card-header">
+      <div class="step-num">⚙</div>
+      <div><div class="card-title">API Key</div><div class="card-sub">Required for AI generation (text & image modes)</div></div>
+    </div>
     <div class="field">
       <label>Groq API Key</label>
       <input type="password" id="apiKey" placeholder="gsk_...">
-      <div class="hint">Free at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> — saved in your browser</div>
+      <div class="hint">Free at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> — saved locally</div>
     </div>
   </div>
 
   <!-- Input -->
   <div class="card">
-    <div class="card-title">Step 1 — Choose Input</div>
-    <div class="card-sub">How do you want to provide the quiz content?</div>
+    <div class="card-header">
+      <div class="step-num">1</div>
+      <div><div class="card-title">Choose Input Method</div><div class="card-sub">Select how to provide your quiz content</div></div>
+    </div>
 
     <div class="tabs">
-      <button class="tab active" id="tabText" onclick="switchTab('text')">📝 Paste Text</button>
-      <button class="tab" id="tabImg" onclick="switchTab('img')">📷 Upload Images</button>
-      <button class="tab" id="tabCsv" onclick="switchTab('csv')">📊 Upload CSV</button>
+      <button class="tab active" id="tabText" onclick="sw('text')">📝 Paste Text</button>
+      <button class="tab" id="tabImg"  onclick="sw('img')">📷 Images</button>
+      <button class="tab" id="tabCsv"  onclick="sw('csv')">📊 CSV</button>
     </div>
 
-    <!-- Text -->
-    <div id="paneText">
+    <div id="pText">
       <div class="field">
         <label>Study material or questions</label>
-        <textarea id="textInput" placeholder="Paste your notes, lecture text, or pre-written questions in any format..."></textarea>
-        <div class="hint" id="textCount">0 characters</div>
+        <textarea id="txt" placeholder="Paste notes, lecture text, a list of questions, or anything you want to be quizzed on..."></textarea>
+        <div class="hint" id="txtCount">0 characters</div>
+        <div id="prewrittenHint" style="display:none;margin-top:6px;padding:8px 12px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;font-size:13px;color:#4338ca;font-weight:500"></div>
       </div>
     </div>
 
-    <!-- Images -->
-    <div id="paneImg" style="display:none">
-      <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
-        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp" multiple>
+    <div id="pImg" style="display:none">
+      <div class="upload-area" id="imgDrop" onclick="document.getElementById('imgFile').click()">
+        <input type="file" id="imgFile" accept=".jpg,.jpeg,.png,.webp" multiple>
         <div class="upload-icon">🖼️</div>
-        <div class="upload-text">Click to select images — or drag & drop<br><small>JPG, PNG, WEBP</small></div>
+        <div class="upload-text">Click to select images, or drag & drop<br><small>JPG · PNG · WEBP</small></div>
       </div>
-      <div class="file-chips" id="fileChips"></div>
+      <div class="chips" id="chips"></div>
     </div>
 
-    <!-- CSV -->
-    <div id="paneCsv" style="display:none">
-      <div class="upload-area" id="csvZone" onclick="document.getElementById('csvInput').click()">
-        <input type="file" id="csvInput" accept=".csv">
+    <div id="pCsv" style="display:none">
+      <div class="upload-area" id="csvDrop" onclick="document.getElementById('csvFile').click()">
+        <input type="file" id="csvFile" accept=".csv">
         <div class="upload-icon">📊</div>
-        <div class="upload-text">Click to upload a CSV file<br>
-          <small>Columns: question, option_a, option_b, option_c, option_d, correct_answer, explanation (optional)</small>
-        </div>
+        <div class="upload-text">Click to upload a CSV file<br><small>Columns: question, option_a…d, correct_answer, explanation (optional)</small></div>
       </div>
-      <div class="csv-preview" id="csvPreview"></div>
+      <div class="csv-info" id="csvInfo"></div>
     </div>
 
-    <!-- Question count (hidden for CSV) -->
-    <div class="field" id="countField" style="margin-top:16px;">
-      <label>Number of Questions</label>
-      <div class="count-row">
-        <input type="number" id="qCount" value="15" min="3" max="50">
-        <span>questions (AI modes only)</span>
-      </div>
+    <div class="field" id="qcField" style="margin-top:16px">
+      <label>Number of Questions <span style="color:var(--muted);font-weight:400">(AI modes)</span></label>
+      <input type="number" id="qc" value="15" min="3" max="50" style="max-width:100px">
     </div>
   </div>
 
   <!-- Generate -->
   <div class="card">
-    <div class="card-title">Step 2 — Generate</div>
-    <div class="card-sub">Click to create your quiz</div>
-    <button class="btn-generate" id="genBtn" onclick="generate()">⚡ Generate Quiz</button>
-
-    <div style="margin-top:16px;">
-      <div class="status idle" id="status">Ready — fill in your content above and click Generate.</div>
+    <div class="card-header">
+      <div class="step-num">2</div>
+      <div><div class="card-title">Generate Quiz</div><div class="card-sub">Click to create your interactive quiz</div></div>
     </div>
-
-    <div class="result-card" id="resultCard">
-      <div class="result-title" id="resultTitle">Quiz Ready</div>
-      <div class="result-meta" id="resultMeta"></div>
+    <button class="btn-gen" id="genBtn" onclick="gen()">⚡ Generate Quiz</button>
+    <div class="status s-idle" id="status">Ready — fill in your content above and click Generate.</div>
+    <div class="result" id="result">
+      <div class="result-title" id="rTitle"></div>
+      <div class="result-meta" id="rMeta"></div>
       <a id="startBtn" href="#" target="_blank" class="btn-start">🚀 Start Quiz</a>
-      <button class="btn-share" onclick="shareQuiz()">🔗 Copy Share Link</button>
+      <button class="btn-copy" onclick="copyLink()">🔗 Copy Share Link</button>
     </div>
   </div>
 
   <!-- Debug -->
-  <div class="card">
-    <label class="debug-toggle">
-      <input type="checkbox" id="debugToggle" onchange="toggleDebug(this.checked)">
+  <div class="card" style="padding:16px 24px">
+    <label class="dbg-toggle">
+      <input type="checkbox" id="dbgOn" onchange="document.getElementById('log').style.display=this.checked?'block':'none'">
       <span>🐛 Debug Console</span>
     </label>
-    <div id="debugLog"></div>
+    <div id="log"></div>
   </div>
 
 </div>
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-let tab = 'text';
-let csvQuestions = null;
-let quizUrl = '';
+let mode='text', csvQ=null, quizUrl='', detectedCount=0, isPrewritten=false;
 
-// ── Persist API key ────────────────────────────────────────────────────────
-const apiKeyEl = document.getElementById('apiKey');
-apiKeyEl.value = localStorage.getItem('groqKey') || '';
-apiKeyEl.addEventListener('input', () => localStorage.setItem('groqKey', apiKeyEl.value.trim()));
+// Persist key
+const k=document.getElementById('apiKey');
+k.value=localStorage.getItem('gk')||'';
+k.addEventListener('input',()=>localStorage.setItem('gk',k.value.trim()));
 
-// ── Tab switching ──────────────────────────────────────────────────────────
-function switchTab(t) {
-  tab = t;
-  ['text','img','csv'].forEach(x => {
-    document.getElementById('tab' + x.charAt(0).toUpperCase() + x.slice(1)).classList.toggle('active', x === t);
-    document.getElementById('pane' + x.charAt(0).toUpperCase() + x.slice(1)).style.display = x === t ? '' : 'none';
+// Tab switch
+function sw(t){
+  mode=t;
+  ['text','img','csv'].forEach(x=>{
+    document.getElementById('tab'+x[0].toUpperCase()+x.slice(1)).classList.toggle('active',x===t);
+    document.getElementById('p'+x[0].toUpperCase()+x.slice(1)).style.display=x===t?'':'none';
   });
-  document.getElementById('countField').style.display = t === 'csv' ? 'none' : '';
-  csvQuestions = null;
-  document.getElementById('csvPreview').classList.remove('visible');
+  document.getElementById('qcField').style.display=t==='csv'?'none':'';
+  csvQ=null; document.getElementById('csvInfo').classList.remove('show');
 }
 
-// ── Text counter ───────────────────────────────────────────────────────────
-document.getElementById('textInput').addEventListener('input', e => {
-  document.getElementById('textCount').textContent = `${e.target.value.length} characters`;
+// Text counter + pre-written detection
+document.getElementById('txt').addEventListener('input',e=>{
+  const text=e.target.value;
+  document.getElementById('txtCount').textContent=`${text.length} characters`;
+  detectPrewritten(text);
 });
 
-// ── Image handling ─────────────────────────────────────────────────────────
-const fileInput = document.getElementById('fileInput');
-const dropZone  = document.getElementById('dropZone');
-
-fileInput.addEventListener('change', updateChips);
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('drag');
-  fileInput.files = e.dataTransfer.files; updateChips();
-});
-
-function updateChips() {
-  const chips = document.getElementById('fileChips');
-  chips.innerHTML = Array.from(fileInput.files)
-    .map(f => `<div class="chip">📄 ${f.name} (${(f.size/1024).toFixed(0)}KB)</div>`).join('');
-}
-
-// ── CSV parsing ────────────────────────────────────────────────────────────
-document.getElementById('csvInput').addEventListener('change', e => {
-  const file = e.target.files[0]; if (!file) return;
-  Papa.parse(file, {
-    header: true, skipEmptyLines: true,
-    complete(res) {
-      const rows = res.data;
-      const preview = document.getElementById('csvPreview');
-      if (!rows.length) { preview.innerHTML = '❌ Empty CSV'; preview.classList.add('visible'); return; }
-
-      // Flexible column detection
-      const cols = Object.keys(rows[0]).map(c => c.toLowerCase().trim());
-      const qCol   = findCol(cols, ['question','q','question text']);
-      const aCol   = findCol(cols, ['option_a','a','option a','answer_a','choice_a']);
-      const bCol   = findCol(cols, ['option_b','b','option b','answer_b','choice_b']);
-      const cCol   = findCol(cols, ['option_c','c','option c','answer_c','choice_c']);
-      const dCol   = findCol(cols, ['option_d','d','option d','answer_d','choice_d']);
-      const ansCol = findCol(cols, ['correct_answer','answer','correct','ans']);
-      const expCol = findCol(cols, ['explanation','explain','reason']);
-
-      if (!qCol || !ansCol) {
-        preview.innerHTML = '❌ Could not detect required columns (question, correct_answer). Check your CSV headers.';
-        preview.classList.add('visible'); return;
-      }
-
-      const originalCols = Object.keys(rows[0]);
-      const get = (row, lcol) => {
-        const orig = originalCols.find(c => c.toLowerCase().trim() === lcol);
-        return orig ? (row[orig] || '').trim() : '';
-      };
-
-      csvQuestions = rows.map((row, i) => {
-        const options = [
-          aCol ? `A) ${get(row, aCol)}` : null,
-          bCol ? `B) ${get(row, bCol)}` : null,
-          cCol ? `C) ${get(row, cCol)}` : null,
-          dCol ? `D) ${get(row, dCol)}` : null
-        ].filter(Boolean);
-
-        // Normalize correct answer
-        let ans = get(row, ansCol);
-        if (/^[abcd]$/i.test(ans)) {
-          const map = {a:0,b:1,c:2,d:3};
-          ans = options[map[ans.toLowerCase()]] || ans;
-        } else if (/^[1-4]$/.test(ans)) {
-          ans = options[parseInt(ans)-1] || ans;
-        } else {
-          const letter = ans.match(/^[A-D]/i)?.[0]?.toUpperCase();
-          if (letter) ans = options[['A','B','C','D'].indexOf(letter)] || ans;
-        }
-
-        return {
-          question: get(row, qCol),
-          options,
-          correctAnswer: ans,
-          explanation: expCol ? get(row, expCol) : '',
-          difficulty: 'easy'
-        };
-      }).filter(q => q.question && q.options.length >= 2);
-
-      preview.innerHTML = `<strong>✅ ${csvQuestions.length} questions loaded</strong> from ${file.name}. Ready to start!`;
-      preview.classList.add('visible');
-      log(`CSV loaded: ${csvQuestions.length} questions`, 'success');
-    }
-  });
-});
-
-function findCol(cols, names) {
-  return names.find(n => cols.includes(n)) || null;
-}
-
-// ── Generate ───────────────────────────────────────────────────────────────
-async function generate() {
-  const apiKey = apiKeyEl.value.trim();
-  const btn    = document.getElementById('genBtn');
-  const status = document.getElementById('status');
-
-  setStatus('loading', '⚡ Starting...');
-  btn.disabled = true;
-  document.getElementById('resultCard').classList.remove('visible');
-
-  try {
-    log('=== QUIZ GENERATION STARTED ===');
-    let quiz;
-
-    if (tab === 'csv') {
-      // ── CSV path ───────────────────────────────────────────────
-      if (!csvQuestions || !csvQuestions.length) throw new Error('No CSV loaded. Upload a CSV file first.');
-      quiz = { title: 'CSV Quiz', questions: csvQuestions };
-      log(`CSV mode: ${csvQuestions.length} questions`, 'success');
-
-    } else if (tab === 'text') {
-      // ── Text path ──────────────────────────────────────────────
-      if (!apiKey) throw new Error('Groq API key required. Add it in Settings above.');
-      const text = document.getElementById('textInput').value.trim();
-      if (!text) throw new Error('Paste some text or study material first.');
-      const qCount = document.getElementById('qCount').value || 15;
-      log(`Text mode: ${text.length} characters, requesting ${qCount} questions`);
-      setStatus('loading', '🤖 Generating questions with AI...');
-      quiz = await callQuizAPI(text, qCount, apiKey);
-
-    } else {
-      // ── Image path ─────────────────────────────────────────────
-      if (!apiKey) throw new Error('Groq API key required. Add it in Settings above.');
-      const files = fileInput.files;
-      if (!files.length) throw new Error('Select at least one image.');
-      const qCount = document.getElementById('qCount').value || 15;
-      let fullText = '';
-
-      for (const f of Array.from(files)) {
-        setStatus('loading', `🔍 Reading ${f.name}...`);
-        log(`OCR: ${f.name}`);
-        const compressed = await compressImage(f);
-        const fd = new FormData(); fd.append('file', compressed);
-        const r = await fetch('/ocr', { method: 'POST', headers: { 'X-Gemini-Key': apiKey }, body: fd });
-        const d = await r.json();
-        if (d.error) throw new Error(`OCR failed: ${d.error}`);
-        fullText += (d.text || '') + '\n\n';
-        log(`Extracted ${d.text?.length || 0} chars from ${f.name}`, 'success');
-      }
-
-      setStatus('loading', '🤖 Generating questions with AI...');
-      quiz = await callQuizAPI(fullText, qCount, apiKey);
-    }
-
-    // ── Encode and build URL ────────────────────────────────────
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(quiz))));
-    quizUrl = `${location.origin}/play?q=${encoded}`;
-
-    // Show result
-    document.getElementById('resultTitle').textContent = quiz.title || 'Your Quiz';
-    document.getElementById('resultMeta').textContent = `${quiz.questions.length} questions · Ready to play`;
-    document.getElementById('startBtn').href = quizUrl;
-    document.getElementById('resultCard').classList.add('visible');
-    setStatus('success', `✅ Quiz generated with ${quiz.questions.length} questions!`);
-    log(`Quiz ready: ${quiz.questions.length} questions`, 'success');
-    log('=== DONE ===', 'success');
-
-  } catch (err) {
-    setStatus('error', `❌ ${err.message}`);
-    log(err.message, 'error');
-  } finally {
-    btn.disabled = false;
+function detectPrewritten(text){
+  // Match numbered questions: "1." "1)" "Q1." "Question 1"
+  const matches=text.match(/^\s*(\d+[.):]|Q\d+[.):][\s]|Question\s+\d+)/gim);
+  const hint=document.getElementById('prewrittenHint');
+  const qcEl=document.getElementById('qc');
+  if(matches&&matches.length>=2){
+    detectedCount=matches.length;
+    isPrewritten=true;
+    qcEl.value=detectedCount;
+    qcEl.style.opacity='.4';
+    qcEl.title='Auto-set from detected questions';
+    hint.style.display='block';
+    hint.textContent=`📋 Detected ${detectedCount} pre-written questions — will use all of them`;
+  } else {
+    detectedCount=0; isPrewritten=false;
+    qcEl.style.opacity='1';
+    qcEl.title='';
+    hint.style.display='none';
   }
 }
 
-async function callQuizAPI(text, qCount, apiKey) {
-  const r = await fetch('/quiz', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Gemini-Key': apiKey },
-    body: JSON.stringify({ text, questionCount: qCount })
-  });
-  const raw = await r.text();
-  log(`Quiz API: ${r.status}`);
-  if (!r.ok) throw new Error(`API error: ${raw}`);
-  const d = JSON.parse(raw);
-  if (d.error) throw new Error(d.error);
-  log(`Generated ${d.questions?.length} questions`, 'success');
+// Image drag/drop
+const imgFile=document.getElementById('imgFile');
+const imgDrop=document.getElementById('imgDrop');
+imgFile.addEventListener('change',renderChips);
+['dragover','dragleave','drop'].forEach(ev=>imgDrop.addEventListener(ev,e=>{
+  e.preventDefault();
+  if(ev==='dragover') imgDrop.classList.add('drag');
+  if(ev==='dragleave') imgDrop.classList.remove('drag');
+  if(ev==='drop'){imgDrop.classList.remove('drag');imgFile.files=e.dataTransfer.files;renderChips();}
+}));
+function renderChips(){
+  document.getElementById('chips').innerHTML=Array.from(imgFile.files)
+    .map(f=>`<div class="chip">📄 ${f.name}</div>`).join('');
+}
+
+// CSV
+document.getElementById('csvFile').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  Papa.parse(f,{header:true,skipEmptyLines:true,complete(res){
+    const rows=res.data; if(!rows.length) return;
+    const cols=Object.keys(rows[0]).map(c=>c.toLowerCase().trim());
+    const fc=(n)=>n.find(x=>cols.includes(x));
+    const qc=fc(['question','q']),ac=fc(['correct_answer','answer','correct','ans']);
+    if(!qc||!ac){document.getElementById('csvInfo').innerHTML='❌ Cannot detect columns. Need "question" and "correct_answer" headers.';document.getElementById('csvInfo').classList.add('show');return;}
+    const origCols=Object.keys(rows[0]);
+    const g=(row,lc)=>{const o=origCols.find(c=>c.toLowerCase().trim()===lc);return o?(row[o]||'').trim():'';};
+    const optKeys=['option_a','option_b','option_c','option_d','a','b','c','d'];
+    const letterToOpt=(letter,opts)=>opts[['a','b','c','d'].indexOf(letter.toLowerCase())]||letter;
+    csvQ=rows.map((row,i)=>{
+      const opts=['a','b','c','d'].map((l,idx)=>{
+        const k=fc([`option_${l}`,l]);
+        return k?`${['A','B','C','D'][idx]}) ${g(row,k)}`:null;
+      }).filter(Boolean);
+      let ans=g(row,ac);
+      if(/^[abcd]$/i.test(ans)) ans=letterToOpt(ans,opts.map(o=>o.replace(/^[A-D]\) /,'')));
+      const expKey=fc(['explanation','explain','reason']);
+      return{question:g(row,qc),options:opts,correctAnswer:ans,explanation:expKey?g(row,expKey):'',difficulty:'easy'};
+    }).filter(q=>q.question&&q.options.length>=2);
+    document.getElementById('csvInfo').innerHTML=`✅ <strong>${csvQ.length} questions</strong> loaded from ${f.name}`;
+    document.getElementById('csvInfo').classList.add('show');
+    log(`CSV: ${csvQ.length} questions loaded`,'s');
+  }});
+});
+
+// Generate
+async function gen(){
+  const apiKey=k.value.trim();
+  const btn=document.getElementById('genBtn');
+  const st=document.getElementById('status');
+  document.getElementById('result').classList.remove('show');
+  btn.disabled=true;
+  try{
+    log('=== GENERATE STARTED ===');
+    let quiz;
+    if(mode==='csv'){
+      if(!csvQ?.length) throw new Error('No CSV loaded.');
+      quiz={title:'CSV Quiz',questions:csvQ};
+    } else if(mode==='text'){
+      if(!apiKey) throw new Error('Add your Groq API key in Settings.');
+      const text=document.getElementById('txt').value.trim();
+      if(!text) throw new Error('Paste some content first.');
+      setS('loading','🤖 Generating with AI...');
+      quiz=await callQuiz(text,detectedCount||document.getElementById('qc').value||15,apiKey,isPrewritten);
+    } else {
+      if(!apiKey) throw new Error('Add your Groq API key in Settings.');
+      if(!imgFile.files.length) throw new Error('Select at least one image.');
+      let fullText='';
+      for(const f of Array.from(imgFile.files)){
+        setS('loading',`🔍 Reading ${f.name}...`);
+        const comp=await compress(f);
+        const fd=new FormData(); fd.append('file',comp);
+        const r=await fetch('/ocr',{method:'POST',headers:{'X-Gemini-Key':apiKey},body:fd});
+        const d=await r.json(); if(d.error) throw new Error(d.error);
+        fullText+=(d.text||'')+'\n\n';
+        log(`OCR: ${d.text?.length||0} chars`,'s');
+      }
+      setS('loading','🤖 Generating quiz...');
+      quiz=await callQuiz(fullText,document.getElementById('qc').value||15,apiKey);
+    }
+    // Encode to URL
+    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(quiz))));
+    quizUrl=`${location.origin}/play?q=${encoded}`;
+    document.getElementById('rTitle').textContent=quiz.title||'Your Quiz';
+    document.getElementById('rMeta').textContent=`${quiz.questions.length} questions · Ready to play`;
+    document.getElementById('startBtn').href=quizUrl;
+    document.getElementById('result').classList.add('show');
+    setS('success',`✅ Quiz ready — ${quiz.questions.length} questions generated!`);
+    log('Done!','s');
+  }catch(e){setS('error',`❌ ${e.message}`);log(e.message,'e');}
+  finally{btn.disabled=false;}
+}
+
+async function callQuiz(text,qc,apiKey,prewritten=false){
+  const r=await fetch('/quiz',{method:'POST',headers:{'Content-Type':'application/json','X-Gemini-Key':apiKey},body:JSON.stringify({text,questionCount:qc,prewritten})});
+  const raw=await r.text(); log(`API ${r.status}`);
+  if(!r.ok) throw new Error(`API error (${r.status})`);
+  const d=JSON.parse(raw); if(d.error) throw new Error(d.error);
+  log(`Generated ${d.questions?.length} questions`,'s');
   return d;
 }
 
-async function compressImage(file) {
-  const img = await createImageBitmap(file);
-  const canvas = document.createElement('canvas');
-  const scale  = Math.min(1, 1000 / img.width);
-  canvas.width  = img.width  * scale;
-  canvas.height = img.height * scale;
-  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.75));
-  return new File([blob], file.name, { type: 'image/jpeg' });
+async function compress(file){
+  const img=await createImageBitmap(file);
+  const c=document.createElement('canvas');
+  const s=Math.min(1,1000/img.width);
+  c.width=img.width*s; c.height=img.height*s;
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.75));
+  return new File([b],file.name,{type:'image/jpeg'});
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-function setStatus(type, msg) {
-  const el = document.getElementById('status');
-  el.className = `status ${type}`;
-  el.textContent = msg;
+function setS(type,msg){
+  const el=document.getElementById('status');
+  el.className=`status s-${type}`; el.textContent=msg;
 }
 
-function shareQuiz() {
-  if (!quizUrl) return;
-  navigator.clipboard.writeText(quizUrl).then(() => alert('Quiz link copied to clipboard!'));
+function copyLink(){
+  if(!quizUrl) return;
+  navigator.clipboard.writeText(quizUrl).then(()=>alert('Link copied!'));
 }
 
-function log(msg, type = 'info') {
-  const el = document.getElementById('debugLog');
-  const ts = new Date().toLocaleTimeString();
-  const div = document.createElement('div');
-  div.className = `log-${type}`;
-  div.textContent = `[${ts}] ${msg}`;
-  el.appendChild(div);
-  el.scrollTop = el.scrollHeight;
+function log(m,t='i'){
+  const el=document.getElementById('log');
+  const d=document.createElement('div');
+  d.className=`li li-${t}`;
+  d.textContent=`[${new Date().toLocaleTimeString()}] ${m}`;
+  el.appendChild(d); el.scrollTop=el.scrollHeight;
 }
-
-function toggleDebug(on) {
-  document.getElementById('debugLog').style.display = on ? 'block' : 'none';
-}
-
-log('QuizCraft initialized', 'success');
+log('QuizCraft ready','s');
 </script>
 </body>
 </html>
