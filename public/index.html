@@ -329,8 +329,7 @@ async function gen(){
       if(!apiKey) throw new Error('Add your Groq API key in Settings.');
       const text=document.getElementById('txt').value.trim();
       if(!text) throw new Error('Paste some content first.');
-      setS('loading','🤖 Generating with AI...');
-      quiz=await callQuiz(text,detectedCount||document.getElementById('qc').value||15,apiKey,isPrewritten);
+      quiz=await callQuizSmart(text,detectedCount||document.getElementById('qc').value||15,apiKey,isPrewritten);
     } else {
       if(!apiKey) throw new Error('Add your Groq API key in Settings.');
       if(!imgFile.files.length) throw new Error('Select at least one image.');
@@ -376,22 +375,57 @@ async function gen(){
   finally{btn.disabled=false;}
 }
 
+// ── Low-level single API call ────────────────────────────────────────────
 async function callQuiz(text,qc,apiKey,prewritten=false){
   const r=await fetch('/quiz',{method:'POST',headers:{'Content-Type':'application/json','X-Gemini-Key':apiKey},body:JSON.stringify({text,questionCount:qc,prewritten})});
   const raw=await r.text(); log(`API ${r.status}`);
-  if(!r.ok) {
-    let msg = `API error (${r.status})`;
-    try {
-      const d = JSON.parse(raw);
-      if (d.error) msg += `: ${d.error}`;
-    } catch(e) {
-      if (raw) msg += `: ${raw.substring(0, 100)}`;
-    }
+  if(!r.ok){
+    let msg=`API error (${r.status})`;
+    try{ const d=JSON.parse(raw); if(d.error) msg+=`: ${d.error}`; }catch(e){ if(raw) msg+=`: ${raw.substring(0,120)}`; }
     throw new Error(msg);
   }
   const d=JSON.parse(raw); if(d.error) throw new Error(d.error);
-  log(`Generated ${d.questions?.length} questions`,'s');
+  log(`Batch returned ${d.questions?.length} questions`,'s');
   return d;
+}
+
+// ── Smart caller: batches large prewritten quizzes client-side ────────────
+async function callQuizSmart(text,qc,apiKey,prewritten=false){
+  const BATCH = 30;
+  if(!prewritten || qc <= BATCH){
+    setS('loading','🤖 Generating with AI...');
+    return callQuiz(text,qc,apiKey,prewritten);
+  }
+
+  // Split question blocks
+  const answerKeyMatch = text.match(/(📋[\s\S]*|##\s*إجابات[\s\S]*|Answer\s+Key[\s\S]*)$/im);
+  const answerKey = answerKeyMatch ? answerKeyMatch[0] : '';
+  const blocks = text.split(/(?=^\s*(?:\*\*?)?(?:[سqQ](?:uestion)?|سؤال|السؤال)?\s*\d+\s*(?::|\.|\)|-|\*\*|:\*\*|\*\*:\s*))/gim)
+    .map(b=>b.trim())
+    .filter(b=>/(?:[سqQ](?:uestion)?|سؤال|السؤال)?\s*\d+\s*(?::|\.|\))/i.test(b)&&b.length>10);
+
+  if(blocks.length===0){
+    setS('loading','🤖 Generating with AI...');
+    return callQuiz(text,qc,apiKey,prewritten);
+  }
+
+  const chunks=[];
+  for(let i=0;i<blocks.length;i+=BATCH) chunks.push(blocks.slice(i,i+BATCH).join('\n\n'));
+  const total=chunks.length;
+
+  const titleMatch=text.match(/^#\s+(.+)/m);
+  const title=titleMatch?titleMatch[1].trim():'اختبار';
+
+  const allQuestions=[];
+  for(let i=0;i<chunks.length;i++){
+    setS('loading',`🤖 Processing batch ${i+1} of ${total}...`);
+    const chunk=chunks[i]+(answerKey?'\n\n'+answerKey:'');
+    const result=await callQuiz(chunk,BATCH,apiKey,true);
+    allQuestions.push(...(result.questions||[]));
+    log(`Batch ${i+1}/${total}: ${result.questions?.length} questions`,'s');
+  }
+
+  return { title, questions: allQuestions };
 }
 
 async function compress(file){
