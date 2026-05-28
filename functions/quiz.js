@@ -77,14 +77,22 @@ ${text}`;
 
 
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const isNvidia = GROQ_API_KEY.startsWith("nvapi-");
+  const apiUrl = isNvidia 
+    ? "https://integrate.api.nvidia.com/v1/chat/completions" 
+    : "https://api.groq.com/openai/v1/chat/completions";
+  const apiModel = isNvidia 
+    ? "deepseek-ai/deepseek-v4-flash" 
+    : "llama-3.3-70b-versatile";
+
+  const res = await fetch(apiUrl, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${GROQ_API_KEY}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
+      model: apiModel,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_tokens: 3500,

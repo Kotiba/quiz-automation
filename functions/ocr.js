@@ -27,14 +27,22 @@ export async function onRequest({ request, env }) {
   const base64Data = arrayBufferToBase64(arrayBuffer);
   const mimeType = file.type || "image/jpeg";
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const isNvidia = GROQ_API_KEY.startsWith("nvapi-");
+  const apiUrl = isNvidia 
+    ? "https://integrate.api.nvidia.com/v1/chat/completions" 
+    : "https://api.groq.com/openai/v1/chat/completions";
+  const apiModel = isNvidia 
+    ? "meta/llama-3.2-11b-vision-instruct" 
+    : "meta-llama/llama-4-scout-17b-16e-instruct";
+
+  const res = await fetch(apiUrl, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${GROQ_API_KEY}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      model: apiModel,
       messages: [{
         role: "user",
         content: [
@@ -54,7 +62,7 @@ export async function onRequest({ request, env }) {
 
   if (!res.ok) {
     const err = await res.text();
-    return new Response(JSON.stringify({ error: `Groq OCR error: ${err}` }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: `OCR error: ${err}` }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
   const data = await res.json();
