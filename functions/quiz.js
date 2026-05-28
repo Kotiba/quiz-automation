@@ -94,7 +94,10 @@ ${text}`;
   };
 
   if (isNvidia) {
-    requestBody.chat_template_kwargs = { thinking: true, reasoning_effort: "high" };
+    requestBody.chat_template_kwargs = { thinking: !prewritten };
+    if (!prewritten) {
+      requestBody.chat_template_kwargs.reasoning_effort = "high";
+    }
   }
 
   const res = await fetch(apiUrl, {

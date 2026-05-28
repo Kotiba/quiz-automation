@@ -118,6 +118,12 @@
       .mode-row{flex-direction:column;align-items:center}
       .mode-btn{max-width:100%;width:100%}
     }
+    [dir="rtl"]{text-align:right}
+    [dir="rtl"] .opt{text-align:right;flex-direction:row-reverse}
+    [dir="rtl"] .mode-btn{text-align:right}
+    [dir="rtl"] .review-title,[dir="rtl"] .rev-item{text-align:right}
+    [dir="rtl"] .rev-item{text-align:right}
+    [dir="rtl"] .score-ring{flex-direction:column}
   </style>
 </head>
 <body>
@@ -327,6 +333,11 @@ function showScore(){
 
 function copyLink(){ navigator.clipboard.writeText(location.href).then(()=>alert('Link copied!')); }
 
+function isArabic(text) {
+  const arabicCharPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+  return arabicCharPattern.test(text);
+}
+
 // Keyboard shortcuts
 document.addEventListener('keydown',e=>{
   const i=['a','b','c','d'].indexOf(e.key.toLowerCase());
@@ -337,7 +348,17 @@ document.addEventListener('keydown',e=>{
 // ── Init ──────────────────────────────────────────────────────────────────
 loadQuiz().then(q=>{
   if(!q||!q.questions?.length) return;
-  quiz=q; questions=q.questions; showStart();
+  quiz=q; questions=q.questions;
+  
+  // Set RTL direction if quiz title or any question is in Arabic
+  const isAr = isArabic(quiz.title || '') || questions.some(item => isArabic(item.question || ''));
+  if (isAr) {
+    document.getElementById('app').setAttribute('dir', 'rtl');
+  } else {
+    document.getElementById('app').removeAttribute('dir');
+  }
+  
+  showStart();
 });
 </script>
 </body>
