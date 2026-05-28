@@ -228,6 +228,16 @@ function sw(t){
   });
   document.getElementById('qcField').style.display=t==='csv'?'none':'';
   csvQ=null; document.getElementById('csvInfo').classList.remove('show');
+  
+  detectedCount=0; isPrewritten=false;
+  const hint=document.getElementById('prewrittenHint');
+  const qcEl=document.getElementById('qc');
+  qcEl.style.opacity='1';
+  qcEl.title='';
+  hint.style.display='none';
+  if (t === 'text') {
+    detectPrewritten(document.getElementById('txt').value);
+  }
 }
 
 // Text counter + pre-written detection
@@ -238,8 +248,8 @@ document.getElementById('txt').addEventListener('input',e=>{
 });
 
 function detectPrewritten(text){
-  // Match numbered questions: "1." "1)" "Q1." "Question 1"
-  const matches=text.match(/^\s*(\d+[.):]|Q\d+[.):][\s]|Question\s+\d+)/gim);
+  // Match numbered questions in English (1., 1), Q1., Question 1) and Arabic (س1:, س 1:, **س1:**)
+  const matches=text.match(/^\s*(?:\*\*?)?(?:[qQ](?:uestion)?|[سs]|سؤال|السؤال)?\s*\d+\s*(?::|\.|\)|-|\*\*|:\*\*|\*\*:\s*)/gim);
   const hint=document.getElementById('prewrittenHint');
   const qcEl=document.getElementById('qc');
   if(matches&&matches.length>=2){
@@ -335,7 +345,8 @@ async function gen(){
         log(`OCR: ${d.text?.length||0} chars`,'s');
       }
       setS('loading','🤖 Generating quiz...');
-      quiz=await callQuiz(fullText,document.getElementById('qc').value||15,apiKey);
+      detectPrewritten(fullText);
+      quiz=await callQuiz(fullText,detectedCount||document.getElementById('qc').value||15,apiKey,isPrewritten);
     }
     // Save to KV and get short URL
     setS('loading','🔗 Saving quiz...');

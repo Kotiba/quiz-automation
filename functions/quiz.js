@@ -17,41 +17,44 @@ export async function onRequest({ request, env }) {
   const hardCount = questionCount - easyCount;
 
   const prompt = prewritten
-    ? `You are a quiz formatter. The text below contains pre-written quiz questions. Extract ALL of them and return as JSON.
+    ? `You are an expert quiz formatter. The text below contains a pre-written quiz with questions, options, and an answer key at the end. Your task is to extract ALL questions, options, and correct answers, and format them into a valid JSON object.
 
-Return ONLY a valid JSON object — no markdown, no code blocks:
+Return ONLY a valid JSON object — no markdown, no code blocks, no trailing text:
 {
-  "title": "A descriptive quiz title based on the topic",
+  "title": "A descriptive quiz title in the same language as the questions",
   "questions": [
     {
-      "question": "The question text?",
-      "options": ["A) Option1", "B) Option2", "C) Option3", "D) Option4"],
-      "correctAnswer": "A) Option1",
-      "explanation": "Brief explanation of the correct answer.",
+      "question": "Question text",
+      "options": ["A) Option 1", "B) Option 2"],
+      "correctAnswer": "A) Option 1",
+      "explanation": "Brief explanation of the correct answer (in the same language as the quiz).",
       "difficulty": "easy"
     }
   ]
 }
 
 Rules:
-- Extract every question exactly as written, do not invent new ones
-- Each question must have exactly 4 options prefixed A) B) C) D)
-- correctAnswer must match one of the options exactly
-- Add a short explanation for each correct answer
-- difficulty must be "easy" or "hard"
+1. **Language Preservation**: You MUST keep the language of the title, questions, options, and explanations exactly as in the input text (e.g., if the questions are in Arabic, the JSON output must be in Arabic). Do NOT translate any content.
+2. **True/False Questions**: For True/False questions (e.g., صح أم خطأ), the options array must contain exactly two options: 'A) صح' and 'B) خطأ' (or their equivalents in the source language, like 'A) True' and 'B) False'). Do not generate dummy options.
+3. **Multiple Choice Options**: For multiple choice questions, prefix options in the array with 'A) ', 'B) ', 'C) ', 'D) '. If the input text uses letters like 'أ', 'ب', 'ج', 'د', map them to 'A) ', 'B) ', 'C) ', 'D) ' respectively (i.e. 'أ' -> 'A', 'ب' -> 'B', 'ج' -> 'C', 'د' -> 'D').
+4. **Correct Answer**: Set 'correctAnswer' to the exact string of the correct option (including the 'A) ' or 'B) ' etc. prefix).
+5. **Answer Key Parsing**: Find the answer key/table at the end of the text (e.g., '📋 إجابات الاختبار الأول' or similar). Use it to determine the correct answer for each question. Map 'صح' to 'A) صح', 'خطأ' to 'B) خطأ', and letters like 'أ', 'ب', 'ج', 'د' to their mapped options 'A) ', 'B) ', 'C) ', 'D) '.
+6. **No Truncation**: Extract and format EVERY SINGLE question in the text. Do not skip or omit any question. If there are 60 questions, extract all 60.
+7. **Brief Explanations**: Provide a very short (one simple sentence) explanation for each answer to keep the output token size manageable.
+8. **Difficulty**: Set difficulty to "easy" or "hard" based on the question context.
 
 Questions to format:
 ${text}`
-    : `You are a quiz generator. Based on the study material below, generate exactly ${questionCount} multiple choice questions (${easyCount} easy, ${hardCount} hard).
+    : `You are an expert quiz generator. Based on the study material below, generate exactly ${questionCount} multiple choice questions (${easyCount} easy, ${hardCount} hard).
 
-Return ONLY a valid JSON object — no markdown, no code blocks:
+Return ONLY a valid JSON object — no markdown, no code blocks, no trailing text:
 {
   "title": "A descriptive quiz title based on the topic",
   "questions": [
     {
-      "question": "The question text here?",
-      "options": ["A) First option", "B) Second option", "C) Third option", "D) Fourth option"],
-      "correctAnswer": "A) First option",
+      "question": "Question text",
+      "options": ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+      "correctAnswer": "A) Option 1",
       "explanation": "Brief explanation of why this answer is correct.",
       "difficulty": "easy"
     }
@@ -59,11 +62,12 @@ Return ONLY a valid JSON object — no markdown, no code blocks:
 }
 
 Rules:
-- Generate exactly ${questionCount} questions total
-- Each question must have exactly 4 options prefixed with A) B) C) D)
-- correctAnswer must exactly match one of the options (including the A) B) C) D) prefix)
-- explanation should be 1-2 sentences explaining the correct answer
-- difficulty must be "easy" or "hard"
+1. **Language Preservation**: The language of the quiz (title, questions, options, explanations) MUST match the language of the study material (e.g., if the study material is in Arabic, the generated quiz must be in Arabic). Do NOT translate the material or write the quiz in English unless the study material is in English.
+2. **Question Count**: Generate exactly ${questionCount} questions total.
+3. **Multiple Choice Options**: Each question must have exactly 4 options prefixed with 'A) ', 'B) ', 'C) ', 'D) '.
+4. **Correct Answer**: Set 'correctAnswer' to the exact string of the correct option (including the prefix).
+5. **Brief Explanations**: Provide a short (1-2 sentences) explanation for each answer.
+6. **Difficulty**: Ensure exactly ${easyCount} questions are marked "easy" and ${hardCount} are marked "hard".
 
 Study material:
 ${text}`;
@@ -81,6 +85,7 @@ ${text}`;
       model: "llama-3.3-70b-versatile",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
+      max_tokens: 8192,
       response_format: { type: "json_object" }
     })
   });
