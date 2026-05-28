@@ -379,7 +379,16 @@ async function gen(){
 async function callQuiz(text,qc,apiKey,prewritten=false){
   const r=await fetch('/quiz',{method:'POST',headers:{'Content-Type':'application/json','X-Gemini-Key':apiKey},body:JSON.stringify({text,questionCount:qc,prewritten})});
   const raw=await r.text(); log(`API ${r.status}`);
-  if(!r.ok) throw new Error(`API error (${r.status})`);
+  if(!r.ok) {
+    let msg = `API error (${r.status})`;
+    try {
+      const d = JSON.parse(raw);
+      if (d.error) msg += `: ${d.error}`;
+    } catch(e) {
+      if (raw) msg += `: ${raw.substring(0, 100)}`;
+    }
+    throw new Error(msg);
+  }
   const d=JSON.parse(raw); if(d.error) throw new Error(d.error);
   log(`Generated ${d.questions?.length} questions`,'s');
   return d;
