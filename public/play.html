@@ -261,8 +261,11 @@ function pick(i){
 function reveal(){
   answered=true;
   const q=questions[current];
-  const cText=q.correctAnswer.replace(/^[A-D]\)\s*/,'').trim();
-  const cIdx=q.options.findIndex(o=>o.replace(/^[A-D]\)\s*/,'').trim()===cText);
+  const cText=q.correctAnswer.replace(/^[A-D]\)\s*/,'').trim().toLowerCase();
+  let cIdx=q.options.findIndex(o=>o.replace(/^[A-D]\)\s*/,'').trim().toLowerCase()===cText);
+  if(cIdx===-1){
+    cIdx=q.options.findIndex(o=>o.toLowerCase().includes(cText) || cText.includes(o.replace(/^[A-D]\)\s*/,'').trim().toLowerCase()));
+  }
   const ok=selected===cIdx;
   results.push({q,selectedIdx:selected,correctIdx:cIdx,isCorrect:ok});
   document.querySelectorAll('.opt').forEach((el,i)=>{
@@ -286,8 +289,11 @@ function reveal(){
 function next(){
   if(!answered&&mode==='exam'&&selected!==null){
     const q=questions[current];
-    const cText=q.correctAnswer.replace(/^[A-D]\)\s*/,'').trim();
-    const cIdx=q.options.findIndex(o=>o.replace(/^[A-D]\)\s*/,'').trim()===cText);
+    const cText=q.correctAnswer.replace(/^[A-D]\)\s*/,'').trim().toLowerCase();
+    let cIdx=q.options.findIndex(o=>o.replace(/^[A-D]\)\s*/,'').trim().toLowerCase()===cText);
+    if(cIdx===-1){
+      cIdx=q.options.findIndex(o=>o.toLowerCase().includes(cText) || cText.includes(o.replace(/^[A-D]\)\s*/,'').trim().toLowerCase()));
+    }
     results.push({q,selectedIdx:selected,correctIdx:cIdx,isCorrect:selected===cIdx});
     answered=true;
   }
@@ -299,8 +305,10 @@ function showScore(){
   const total=results.length, correct=results.filter(r=>r.isCorrect).length;
   const pct=Math.round(correct/total*100), passed=pct>=70;
   const review=results.map((r,i)=>{
-    const sel=r.selectedIdx!==null?r.q.options[r.selectedIdx].replace(/^[A-D]\)\s*/,''):'No answer';
-    const cor=r.q.options[r.correctIdx].replace(/^[A-D]\)\s*/,'');
+    const selOpt = r.selectedIdx!==null && r.q.options[r.selectedIdx] ? r.q.options[r.selectedIdx] : '';
+    const sel = selOpt ? selOpt.replace(/^[A-D]\)\s*/,'') : 'No answer';
+    const corOpt = r.correctIdx!==-1 && r.q.options[r.correctIdx] ? r.q.options[r.correctIdx] : r.q.correctAnswer;
+    const cor = corOpt ? corOpt.replace(/^[A-D]\)\s*/,'') : 'No answer';
     return `<div class="rev-item ${r.isCorrect?'rc':'rw'}">
       <div class="rev-q">${i+1}. ${esc(r.q.question)}</div>
       ${!r.isCorrect?`<div class="rev-a aw">✗ Your answer: ${esc(sel)}</div>`:''}
