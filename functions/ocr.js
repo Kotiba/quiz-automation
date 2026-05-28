@@ -10,10 +10,10 @@ function arrayBufferToBase64(buffer) {
 export async function onRequest({ request, env }) {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
-  const GROQ_API_KEY = request.headers.get("X-Gemini-Key") || env.GROQ_API_KEY;
+  const API_KEY = request.headers.get("X-Gemini-Key") || env.GROQ_API_KEY;
 
-  if (!GROQ_API_KEY) {
-    return new Response(JSON.stringify({ error: "GROQ_API_KEY not configured" }), { status: 500, headers: { "Content-Type": "application/json" } });
+  if (!API_KEY || !API_KEY.startsWith("nvapi-")) {
+    return new Response(JSON.stringify({ error: "Please provide a valid Nvidia API key starting with 'nvapi-'" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
   const form = await request.formData();
@@ -27,18 +27,13 @@ export async function onRequest({ request, env }) {
   const base64Data = arrayBufferToBase64(arrayBuffer);
   const mimeType = file.type || "image/jpeg";
 
-  const isNvidia = GROQ_API_KEY.startsWith("nvapi-");
-  const apiUrl = isNvidia 
-    ? "https://integrate.api.nvidia.com/v1/chat/completions" 
-    : "https://api.groq.com/openai/v1/chat/completions";
-  const apiModel = isNvidia 
-    ? "meta/llama-3.2-11b-vision-instruct" 
-    : "meta-llama/llama-4-scout-17b-16e-instruct";
+  const apiUrl = "https://integrate.api.nvidia.com/v1/chat/completions";
+  const apiModel = "meta/llama-3.2-11b-vision-instruct";
 
   const res = await fetch(apiUrl, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${GROQ_API_KEY}`,
+      "Authorization": `Bearer ${API_KEY}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({

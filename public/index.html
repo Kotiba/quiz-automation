@@ -132,9 +132,9 @@
       <div><div class="card-title">API Key</div><div class="card-sub">Required for AI generation (text & image modes)</div></div>
     </div>
     <div class="field">
-      <label>Groq API Key</label>
-      <input type="password" id="apiKey" placeholder="gsk_...">
-      <div class="hint">Free at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> — saved locally</div>
+      <label>Nvidia API Key</label>
+      <input type="password" id="apiKey" placeholder="nvapi-...">
+      <div class="hint">Get your key from Nvidia NIM — saved locally</div>
     </div>
   </div>
 
@@ -326,12 +326,12 @@ async function gen(){
       if(!csvQ?.length) throw new Error('No CSV loaded.');
       quiz={title:'CSV Quiz',questions:csvQ};
     } else if(mode==='text'){
-      if(!apiKey) throw new Error('Add your Groq API key in Settings.');
+      if(!apiKey) throw new Error('Add your Nvidia API key in Settings.');
       const text=document.getElementById('txt').value.trim();
       if(!text) throw new Error('Paste some content first.');
       quiz=await callQuizSmart(text,detectedCount||document.getElementById('qc').value||15,apiKey,isPrewritten);
     } else {
-      if(!apiKey) throw new Error('Add your Groq API key in Settings.');
+      if(!apiKey) throw new Error('Add your Nvidia API key in Settings.');
       if(!imgFile.files.length) throw new Error('Select at least one image.');
       let fullText='';
       for(const f of Array.from(imgFile.files)){
@@ -375,134 +375,56 @@ async function gen(){
   finally{btn.disabled=false;}
 }
 
-// ── Build prompt for a pre-written chunk ─────────────────────────────────
-function buildPrompt(text, qc, prewritten) {
-  const easyCount = Math.round(qc * 0.7);
-  const hardCount = qc - easyCount;
-  if (prewritten) {
-    return `You are an expert quiz formatter. Extract and format ALL questions from the text below as JSON.
-
-Return ONLY a valid JSON object:
-{"title":"quiz title in same language","questions":[{"question":"...","options":["A) ...","B) ..."],"correctAnswer":"A) ...","explanation":"max 5 words","difficulty":"easy"}]}
-
-Rules:
-1. Keep the same language as the source (Arabic stays Arabic, do NOT translate).
-2. True/False: options must be exactly ["A) صح","B) خطأ"] or ["A) True","B) False"].
-3. Multiple choice: map أ→A ب→B ج→C د→D and prefix "A) " "B) " "C) " "D) ".
-4. Use the answer key at the end of the text to set correctAnswer.
-5. Output compact JSON with minimal whitespace. Extract EVERY question.
-
-Questions and answer key:
-${text}`;
-  }
-  return `You are an expert quiz generator. Generate exactly ${qc} multiple choice questions (${easyCount} easy, ${hardCount} hard) from the study material below.
-
-Return ONLY a valid JSON object:
-{"title":"quiz title","questions":[{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correctAnswer":"A) ...","explanation":"max 5 words","difficulty":"easy"}]}
-
-Rules:
-1. Language of quiz MUST match the study material language.
-2. Exactly ${qc} questions total.
-3. Each question has exactly 4 options prefixed A) B) C) D).
-4. correctAnswer must exactly match one option.
-5. Output compact JSON with minimal whitespace.
-
-Study material:
-${text}`;
-}
-
-// ── Call Nvidia API directly from browser (no Cloudflare proxy / no timeout) ──
-async function callNvidiaDirect(prompt, apiKey) {
-  const r = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'deepseek-ai/deepseek-v4-flash',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-      max_tokens: 8192,
-      response_format: { type: 'json_object' },
-      chat_template_kwargs: { thinking: false }
-    })
-  });
-  const raw = await r.text();
-  if (!r.ok) throw new Error(`Nvidia API error (${r.status}): ${raw.substring(0, 200)}`);
-  const data = JSON.parse(raw);
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error('No response from Nvidia API');
-  return JSON.parse(content);
-}
-
-// ── Call via Cloudflare proxy (Groq keys) ────────────────────────────────
-async function callQuizProxy(text, qc, apiKey, prewritten) {
+// ── Smart caller: uses Nvidia streaming proxy ─────────────────────────────
+async function callQuizSmart(text, qc, apiKey, prewritten=false) {
+  setS('loading', '🤖 Generating with DeepSeek (streaming)...');
   const r = await fetch('/quiz', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Gemini-Key': apiKey },
-    body: JSON.stringify({ text, questionCount: qc, prewritten })
+    body: JSON.stringify({ text, questionCount: qc, prewritten, stream: true })
   });
-  const raw = await r.text(); log(`API ${r.status}`);
+  log(`Stream started: ${r.status}`);
   if (!r.ok) {
+    const err = await r.text();
     let msg = `API error (${r.status})`;
-    try { const d = JSON.parse(raw); if (d.error) msg += `: ${d.error}`; } catch(e) { if (raw) msg += `: ${raw.substring(0,120)}`; }
+    try { const d = JSON.parse(err); if (d.error) msg += `: ${d.error}`; } catch(e) { msg += `: ${err.substring(0, 150)}`; }
     throw new Error(msg);
   }
-  const d = JSON.parse(raw); if (d.error) throw new Error(d.error);
-  return d;
-}
 
-// ── Smart caller: handles batching + direct vs proxy routing ─────────────
-async function callQuizSmart(text, qc, apiKey, prewritten=false) {
-  const BATCH = 30;
-  const isNvidia = apiKey.startsWith('nvapi-');
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let content = '';
 
-  // Helper: make one batch call through the right channel
-  async function oneBatch(batchText, batchQc, isPre) {
-    if (isNvidia) {
-      return callNvidiaDirect(buildPrompt(batchText, batchQc, isPre), apiKey);
-    } else {
-      return callQuizProxy(batchText, batchQc, apiKey, isPre);
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? ''; // keep incomplete last line
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (data === '[DONE]') continue;
+      try {
+        const parsed = JSON.parse(data);
+        const delta = parsed.choices?.[0]?.delta;
+        if (!delta) continue;
+        // Skip reasoning/thinking tokens (as per Nvidia official docs)
+        if (delta.reasoning || delta.reasoning_content) continue;
+        if (delta.content) content += delta.content;
+      } catch(e) { /* partial JSON line, skip */ }
     }
   }
 
-  // No batching needed for small or non-prewritten
-  if (!prewritten || qc <= BATCH) {
-    setS('loading', '🤖 Generating with AI...');
-    const result = await oneBatch(text, qc, prewritten);
-    log(`Generated ${result.questions?.length} questions`, 's');
-    return result;
-  }
-
-  // Large prewritten quiz → split into chunks of 30
-  const answerKeyMatch = text.match(/(📋[\s\S]*|##\s*إجابات[\s\S]*|Answer\s+Key[\s\S]*)$/im);
-  const answerKey = answerKeyMatch ? answerKeyMatch[0] : '';
-  const blocks = text.split(/(?=^\s*(?:\*\*?)?(?:[سqQ](?:uestion)?|سؤال|السؤال)?\s*\d+\s*(?::|\.|\)|-|\*\*|:\*\*|\*\*:\s*))/gim)
-    .map(b => b.trim())
-    .filter(b => /(?:[سqQ](?:uestion)?|سؤال|السؤال)?\s*\d+\s*(?::|\.|\))/i.test(b) && b.length > 10);
-
-  if (blocks.length === 0) {
-    setS('loading', '🤖 Generating with AI...');
-    const result = await oneBatch(text, qc, prewritten);
-    log(`Generated ${result.questions?.length} questions`, 's');
-    return result;
-  }
-
-  const chunks = [];
-  for (let i = 0; i < blocks.length; i += BATCH) chunks.push(blocks.slice(i, i + BATCH).join('\n\n'));
-  const total = chunks.length;
-
-  const titleMatch = text.match(/^#\s+(.+)/m);
-  const title = titleMatch ? titleMatch[1].trim() : 'اختبار';
-
-  const allQuestions = [];
-  for (let i = 0; i < chunks.length; i++) {
-    setS('loading', `🤖 Processing batch ${i+1} of ${total}...`);
-    const chunk = chunks[i] + (answerKey ? '\n\n' + answerKey : '');
-    const result = await oneBatch(chunk, BATCH, true);
-    allQuestions.push(...(result.questions || []));
-    log(`Batch ${i+1}/${total}: ${result.questions?.length} questions`, 's');
-  }
-
-  return { title, questions: allQuestions };
+  if (!content.trim()) throw new Error('Empty response from API');
+  // Extract JSON object from content (model may add extra text)
+  const match = content.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error(`Could not find JSON in response: ${content.substring(0, 200)}`);
+  const quiz = JSON.parse(match[0]);
+  log(`Stream done: ${quiz.questions?.length} questions`, 's');
+  return quiz;
 }
 
 async function compress(file){
