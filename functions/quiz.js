@@ -40,8 +40,9 @@ Rules:
 4. **Correct Answer**: Set 'correctAnswer' to the exact string of the correct option (including the 'A) ' or 'B) ' etc. prefix).
 5. **Answer Key Parsing**: Find the answer key/table at the end of the text (e.g., '📋 إجابات الاختبار الأول' or similar). Use it to determine the correct answer for each question. Map 'صح' to 'A) صح', 'خطأ' to 'B) خطأ', and letters like 'أ', 'ب', 'ج', 'د' to their mapped options 'A) ', 'B) ', 'C) ', 'D) '.
 6. **No Truncation**: Extract and format EVERY SINGLE question in the text. Do not skip or omit any question. If there are 60 questions, extract all 60.
-7. **Brief Explanations**: Provide a very short (one simple sentence) explanation for each answer to keep the output token size manageable.
+7. **Brief Explanations**: Keep explanations extremely brief (maximum 5 words) to save tokens and fit under rate limits.
 8. **Difficulty**: Set difficulty to "easy" or "hard" based on the question context.
+9. **Compact Output**: Output the JSON in a compact form with minimal whitespace to minimize token usage.
 
 Questions to format:
 ${text}`
@@ -66,8 +67,9 @@ Rules:
 2. **Question Count**: Generate exactly ${questionCount} questions total.
 3. **Multiple Choice Options**: Each question must have exactly 4 options prefixed with 'A) ', 'B) ', 'C) ', 'D) '.
 4. **Correct Answer**: Set 'correctAnswer' to the exact string of the correct option (including the prefix).
-5. **Brief Explanations**: Provide a short (1-2 sentences) explanation for each answer.
+5. **Brief Explanations**: Keep explanations extremely brief (maximum 5 words).
 6. **Difficulty**: Ensure exactly ${easyCount} questions are marked "easy" and ${hardCount} are marked "hard".
+7. **Compact Output**: Output the JSON in a compact form with minimal whitespace to minimize token usage.
 
 Study material:
 ${text}`;
@@ -85,7 +87,7 @@ ${text}`;
       model: "llama-3.3-70b-versatile",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
-      max_tokens: 8192,
+      max_tokens: 3500,
       response_format: { type: "json_object" }
     })
   });
