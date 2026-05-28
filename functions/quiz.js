@@ -85,24 +85,30 @@ ${text}`;
     ? "deepseek-ai/deepseek-v4-flash" 
     : "llama-3.3-70b-versatile";
 
+  const requestBody = {
+    model: apiModel,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.7,
+    max_tokens: isNvidia ? 8192 : 3500,
+    response_format: { type: "json_object" }
+  };
+
+  if (isNvidia) {
+    requestBody.chat_template_kwargs = { thinking: true, reasoning_effort: "high" };
+  }
+
   const res = await fetch(apiUrl, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${GROQ_API_KEY}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      model: apiModel,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 3500,
-      response_format: { type: "json_object" }
-    })
+    body: JSON.stringify(requestBody)
   });
 
   if (!res.ok) {
     const err = await res.text();
-    return new Response(JSON.stringify({ error: `Groq API error: ${err}` }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: `API error: ${err}` }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
   const data = await res.json();
